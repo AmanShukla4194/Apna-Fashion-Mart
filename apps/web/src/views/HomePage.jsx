@@ -1,508 +1,436 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { 
-  MapPin, Store, ShoppingBag, Truck, ShieldCheck, 
-  Star, Search, Heart, CreditCard, RefreshCcw, Phone,
-  ChevronRight, Compass, Smartphone
-} from 'lucide-react';
-import { Accordion } from '@/components/ui/accordion';
+import React from 'react';
+import Link from 'next/link';
+import { useRouter, usePathname } from 'next/navigation';
+import { ArrowRight, Check, ChevronRight, Heart, MapPin, Plus, RefreshCcw, RotateCw, ShieldCheck, ShoppingBag, Star, Truck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { AFM_DATA } from '@/lib/seed-data';
 
-import Header from '@/components/Header';
-import Footer from '@/components/Footer';
-import HowItWorksStep from '@/components/HowItWorksStep';
-import ShopCardFeatured from '@/components/ShopCardFeatured';
-import CategoryCard from '@/components/CategoryCard';
-import TrendingCollectionCard from '@/components/TrendingCollectionCard';
-import ProductCardHome from '@/components/ProductCardHome';
-import TrustBadge from '@/components/TrustBadge';
-import TestimonialCard from '@/components/TestimonialCard';
-import PromotionalCard from '@/components/PromotionalCard';
-import FAQItem from '@/components/FAQItem';
+// AfmButton kept for prototype compatibility — maps to shadcn Button
+function AfmButton({ variant='primary', size, children, onClick, className='' }) {
+  const sv = variant === 'primary' ? 'default' : variant === 'ghost' ? 'outline' : variant === 'on-dark' ? 'secondary' : 'ghost';
+  return <Button variant={sv} size={size} onClick={onClick} className={className}>{children}</Button>;
+}
 
-// Map & Location imports
-import MapView from '@/components/MapView';
-import LocationSelector from '@/components/LocationSelector';
 
-import { getFeaturedStores, getNewArrivals } from '@/lib/api';
-import { toast } from 'sonner';
 
-const HomePage = () => {
-  const router = useRouter();
-  const [featuredShops, setFeaturedShops] = useState([]);
-  const [newArrivals, setNewArrivals] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchHomeData = async () => {
-      try {
-        const [shops, products] = await Promise.all([
-          getFeaturedStores(4),
-          getNewArrivals(8),
-        ]);
-        setFeaturedShops(shops);
-        setNewArrivals(products);
-      } catch (err) {
-        console.error('Failed to load home data', err);
-        toast.error('Could not load marketplace data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchHomeData();
-  }, []);
-
-  const fadeUpVariant = {
-    hidden: { opacity: 0, y: 30 },
-    visible: { opacity: 1, y: 0, transition: { duration: 0.6, ease: "easeOut" } }
-  };
-
-  const staggerContainer = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 }
-    }
-  };
+function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishlist, onCategoryClick }) {
+  const I = AfmIcons;
+  const { boutiques, products, trust, cities, categories, howItWorks, testimonials, appFeatures } = AFM_DATA;
 
   return (
-    <>
-      <div className="min-h-screen flex flex-col bg-background selection:bg-secondary selection:text-white">
-        <Header />
+    <main>
+      {/* ===== HERO ===== */}
+      <section className="hero">
+        <div className="hero-collage">
+          <div className="cell c1"></div>
+          <div className="cell c2"></div>
+          <div className="cell c3"></div>
+          <div className="cell c4"></div>
+          <div className="cell c5"></div>
+          <div className="cell c6"></div>
+          <div className="cell c7"></div>
+          <div className="cell c8"></div>
+          <div className="cell c9"></div>
+          <div className="cell c10"></div>
+          <div className="cell c11"></div>
+          <div className="cell c12"></div>
+          <div className="cell c13"></div>
+          <div className="cell c14"></div>
+          <div className="cell c15"></div>
+          <div className="cell c16"></div>
+          <div className="cell c17"></div>
+          <div className="cell c18"></div>
+          <div className="cell c19"></div>
+          <div className="cell c20"></div>
+          <div className="cell c21"></div>
+          <div className="cell c22"></div>
+          <div className="cell c23"></div>
+          <div className="cell c24"></div>
+        </div>
 
-        {/* 1. PREMIUM HERO SECTION */}
-        <section className="relative min-h-[90vh] lg:min-h-screen flex items-center justify-center pt-24">
-          <div className="absolute inset-0 z-0">
-            <img 
-              src="https://images.unsplash.com/photo-1675631082746-ef4c0c5ed67e"
-              alt="Premium Fashion Boutique"
-              className="w-full h-full object-cover object-center"
-            />
-            <div className="absolute inset-0 bg-primary/80 mix-blend-multiply" />
-            <div className="absolute inset-0 bg-gradient-to-t from-primary via-primary/50 to-transparent opacity-90" />
+        <div className="hero-3d-badge">
+          <div className="ring">
+            <span className="lbl"><em>3D</em>view</span>
           </div>
+          <span className="sub">Drag · rotate · zoom</span>
+        </div>
 
-          <div className="container-default relative z-10 text-center flex flex-col items-center">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.2 }}
-            >
-              <span className="inline-block py-1 px-3 rounded-full bg-white/10 backdrop-blur-md text-white border border-white/20 text-sm font-medium tracking-widest uppercase mb-6">
-                Apna Style, Apna Store
-              </span>
-              <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-white mb-6 leading-tight font-serif text-balance">
-                Your Style,<br />Your Identity
-              </h1>
-              <p className="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto leading-relaxed">
-                Discover the finest fashion from premium verified boutiques right in your neighborhood. Quality meets convenience.
-              </p>
-
-              <div className="bg-white/10 backdrop-blur-md p-4 rounded-3xl border border-white/20 max-w-3xl mx-auto mb-10 flex flex-col sm:flex-row items-center gap-4">
-                <div className="w-full sm:w-2/3 bg-white rounded-xl">
-                  <LocationSelector />
-                </div>
-                <Button 
-                  className="w-full sm:w-1/3 bg-secondary hover:bg-secondary/90 text-white rounded-xl h-12 text-lg shadow-lg shadow-secondary/30"
-                  onClick={() => router.push('/nearby-shops')}
-                >
-                  Explore Now
-                </Button>
-              </div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* 2. HOW IT WORKS SECTION */}
-        <section className="section-padding bg-white">
-          <div className="container-default">
-            <motion.div 
-              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant}
-              className="text-center mb-16"
-            >
-              <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">How It Works</h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Your journey to premium local fashion in four simple steps.</p>
-            </motion.div>
-
-            <motion.div 
-              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8"
-            >
-              <motion.div variants={fadeUpVariant}>
-                <HowItWorksStep number="1" icon={MapPin} title="Detect Location" description="Share your location to find the best verified boutiques near you." />
-              </motion.div>
-              <motion.div variants={fadeUpVariant}>
-                <HowItWorksStep number="2" icon={Store} title="Browse Nearby Shops" description="Explore curated collections from top-rated local sellers." />
-              </motion.div>
-              <motion.div variants={fadeUpVariant}>
-                <HowItWorksStep number="3" icon={Search} title="Explore Products" description="Find exactly what you're looking for with our advanced search." />
-              </motion.div>
-              <motion.div variants={fadeUpVariant}>
-                <HowItWorksStep number="4" icon={ShoppingBag} title="Order or Visit" description="Buy online with fast delivery or visit the store directly." />
-              </motion.div>
-            </motion.div>
-          </div>
-        </section>
-
-        {/* 3. FEATURED NEARBY SHOPS SECTION */}
-        <section className="section-padding bg-muted/30">
-          <div className="container-default">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant}>
-                <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">Featured Boutiques</h2>
-                <p className="text-muted-foreground text-lg">Top-rated verified sellers delivering premium fashion.</p>
-              </motion.div>
-              <button className="hidden md:flex items-center gap-1 rounded-full px-5 py-2 border border-primary text-primary bg-transparent hover:bg-primary hover:text-white transition-colors font-medium text-sm" onClick={() => router.push('/nearby-shops')}>
-                View All Shops <ChevronRight className="w-4 h-4 ml-1" />
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[...Array(4)].map((_, i) => <Skeleton key={i} className="aspect-[4/5] rounded-2xl" />)}
-              </div>
-            ) : (
-              <motion.div 
-                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}
-                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
-              >
-                {featuredShops.map((shop) => (
-                  <motion.div key={shop.id} variants={fadeUpVariant}>
-                    <ShopCardFeatured shop={shop} />
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-            
-            <div className="mt-10 text-center md:hidden">
-              <button className="rounded-full w-full px-6 py-2.5 border border-primary text-primary bg-transparent hover:bg-primary hover:text-white transition-colors font-medium text-sm" onClick={() => router.push('/nearby-shops')}>
-                View All Shops
-              </button>
+        <div className="container hero-inner">
+          <div>
+            <span className="hero-eyebrow">
+              <span style={{ width: 6, height: 6, borderRadius: 99, background: '#FF55B0' }}></span>
+              Apna style · Apna store
+            </span>
+            <h1><em>Your</em> neighborhood,<br/>in vogue.</h1>
+            <p>Discover verified local boutiques near you. Browse, wishlist, order — or just walk in. Mumbai · Bengaluru · Delhi · Jaipur, and growing.</p>
+            <div className="hero-cta-row">
+              <AfmButton variant="primary" onClick={() => setView('nearby')}>
+                <MapPin size={18} />
+                Find Shops Near Me
+              </AfmButton>
+              <AfmButton variant="on-dark" onClick={() => setView('product')}>
+                Browse Featured →
+              </AfmButton>
             </div>
           </div>
-        </section>
 
-        {/* 4. TRENDING COLLECTIONS SECTION (Bento Grid) */}
-        <section className="section-padding bg-white">
-          <div className="container-default">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant} className="mb-16">
-              <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">Curated Collections</h2>
-              <p className="text-muted-foreground text-lg">Explore categories tailored for your lifestyle.</p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-4 grid-rows-none md:grid-rows-2 gap-4 md:gap-6 h-auto md:h-[600px]">
-              <TrendingCollectionCard 
-                title="Women's Fashion" 
-                image="https://images.unsplash.com/photo-1563099599-7d779f2b3b86" 
-                className="md:col-span-2 md:row-span-2 h-[300px] md:h-full"
-                onClick={() => router.push('/categories?category=womens')}
-              />
-              <TrendingCollectionCard 
-                title="Men's Edit" 
-                image="https://images.unsplash.com/photo-1701759164397-d49e71987ab5" 
-                className="md:col-span-1 md:row-span-1 h-[250px] md:h-full"
-                onClick={() => router.push('/categories?category=mens')}
-              />
-              <TrendingCollectionCard 
-                title="Luxury" 
-                image="https://images.unsplash.com/photo-1678547241895-1c307914b50c" 
-                className="md:col-span-1 md:row-span-1 h-[250px] md:h-full"
-                onClick={() => router.push('/categories')}
-              />
-              <TrendingCollectionCard 
-                title="Ethnic Wear" 
-                image="https://images.unsplash.com/photo-1693987644236-3c440256784b" 
-                className="md:col-span-2 md:row-span-1 h-[250px] md:h-full"
-                onClick={() => router.push('/categories')}
-              />
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mt-4 md:mt-6 h-auto md:h-[300px]">
-              <TrendingCollectionCard title="Accessories" image="https://images.unsplash.com/photo-1684407261522-48ad66a060e9" className="h-[250px] md:h-full" />
-              <TrendingCollectionCard title="Footwear" image="https://images.unsplash.com/photo-1575577806501-431c984dc0a1" className="h-[250px] md:h-full" />
-              <TrendingCollectionCard title="Kids" image="https://images.unsplash.com/photo-1661444369917-78c800bc7717" className="h-[250px] md:h-full" />
-            </div>
-          </div>
-        </section>
-
-        {/* 5. NEW ARRIVALS SECTION */}
-        <section className="section-padding bg-primary">
-          <div className="container-default">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
-              <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant}>
-                <h2 className="text-2xl sm:text-4xl font-bold text-white font-serif mb-4">New Arrivals</h2>
-                <p className="text-white/70 text-lg">Fresh pieces just dropped in your local boutiques.</p>
-              </motion.div>
-              <button className="hidden md:flex items-center gap-1 rounded-full px-5 py-2 border border-white text-white bg-transparent hover:bg-white hover:text-primary transition-colors font-medium text-sm" onClick={() => router.push('/categories')}>
-                View All Products <ChevronRight className="w-4 h-4 ml-1" />
-              </button>
-            </div>
-
-            {loading ? (
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-                {[...Array(8)].map((_, i) => <Skeleton key={i} className="aspect-[3/4] rounded-2xl bg-white/10" />)}
-              </div>
-            ) : (
-              <motion.div 
-                initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}
-                className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6"
-              >
-                {newArrivals.map((product) => (
-                  <motion.div key={product.id} variants={fadeUpVariant}>
-                    <ProductCardHome product={product} />
-                  </motion.div>
-                ))}
-              </motion.div>
-            )}
-            
-            <div className="mt-10 text-center md:hidden">
-              <button className="rounded-full w-full px-6 py-2.5 border border-white text-white bg-transparent hover:bg-white hover:text-primary transition-colors font-medium text-sm" onClick={() => router.push('/categories')}>
-                View All Products
-              </button>
-            </div>
-          </div>
-        </section>
-
-        {/* 6. WHY SHOP WITH US SECTION */}
-        <section className="section-padding bg-white">
-          <div className="container-default">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant} className="text-center mb-16">
-              <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">The Apna Advantage</h2>
-              <p className="text-muted-foreground text-lg max-w-2xl mx-auto">Why thousands of fashion enthusiasts trust our marketplace.</p>
-            </motion.div>
-
-            <motion.div 
-              initial="hidden" whileInView="visible" viewport={{ once: true }} variants={staggerContainer}
-              className="grid grid-cols-2 md:grid-cols-4 gap-6"
-            >
-              <TrustBadge icon={ShieldCheck} title="Verified Sellers" description="Strict vetting for all boutiques" />
-              <TrustBadge icon={Star} title="Premium Quality" description="Curated high-grade fashion" />
-              <TrustBadge icon={CreditCard} title="Best Prices" description="Direct from local vendors" />
-              <TrustBadge icon={Truck} title="Fast Delivery" description="Same-day local fulfillment" />
-              <TrustBadge icon={RefreshCcw} title="Easy Returns" description="Hassle-free 7-day policy" />
-              <TrustBadge icon={ShoppingBag} title="COD Available" description="Pay on delivery option" />
-              <TrustBadge icon={CreditCard} title="Secure Payments" description="Encrypted transactions" />
-              <TrustBadge icon={Phone} title="24/7 Support" description="Always here to help you" />
-            </motion.div>
-          </div>
-        </section>
-
-        {/* 7. SHOP BY CATEGORY SECTION */}
-        <section className="section-padding bg-muted/30">
-          <div className="container-default text-center">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant} className="mb-16">
-              <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">Shop by Category</h2>
-              <p className="text-muted-foreground text-lg">Browse exactly what you need quickly.</p>
-            </motion.div>
-
-            <div className="flex flex-wrap justify-center gap-6 md:gap-10">
-              {[
-                { icon: "👗", label: "Dresses" }, { icon: "👔", label: "Shirts" },
-                { icon: "👖", label: "Bottoms" }, { icon: "👟", label: "Shoes" },
-                { icon: "👜", label: "Bags" }, { icon: "⌚", label: "Watches" },
-                { icon: "🕶️", label: "Accessories" }, { icon: "🧥", label: "Outerwear" }
-              ].map((cat, idx) => (
-                <div key={idx} className="w-24 sm:w-32">
-                  <CategoryCard icon={cat.icon} label={cat.label} onClick={() => router.push('/categories')} />
-                </div>
+          <aside className="hero-floating">
+            <div className="stat-num"><em>1,247</em></div>
+            <div className="stat-label">Boutiques verified in your city</div>
+            <div className="avatars">
+              {boutiques.slice(0,4).map(b => (
+                <div key={b.id} className="avatar" style={{ background: b.bg }}>{b.initial.charAt(0)}</div>
               ))}
+              <div className="avatar" style={{ background: 'rgba(255,255,255,0.06)', fontSize: 11, letterSpacing: '0.02em' }}>+1.2k</div>
+            </div>
+            <div className="city-strip">
+              {cities.map(c => <span key={c} className="city-chip">{c}</span>)}
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      {/* ===== STATS STRIP ===== */}
+      <section style={{ padding: '60px 0 0' }}>
+        <div className="container">
+          <div className="stats-strip">
+            <div className="stat-cell">
+              <div className="num"><em>1,247</em></div>
+              <div className="lab">Verified boutiques</div>
+            </div>
+            <div className="stat-cell">
+              <div className="num"><em>4</em> <span style={{ fontSize: 22, fontWeight: 500, color: 'var(--fg-muted)' }}>cities</span></div>
+              <div className="lab">Mumbai · Bengaluru · Delhi · Jaipur</div>
+            </div>
+            <div className="stat-cell">
+              <div className="num"><em>48 hr</em></div>
+              <div className="lab">From signup to verified</div>
+            </div>
+            <div className="stat-cell">
+              <div className="num"><em>4.8</em><span style={{ color: 'var(--gold-500)', fontSize: 28 }}> ★</span></div>
+              <div className="lab">App store rating</div>
             </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* 8. SPECIAL OFFERS SECTION */}
-        <section className="section-padding bg-white">
-          <div className="container-default">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant} className="mb-12">
-              <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">Exclusive Offers</h2>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <PromotionalCard 
-                discount="50% OFF" 
-                title="Summer Clearance" 
-                description="Grab the hottest summer styles before they're gone forever." 
-                code="SUMMER50" 
-                color="bg-primary" 
-              />
-              <PromotionalCard 
-                discount="FLAT ₹500" 
-                title="First Purchase" 
-                description="Welcome to Apna Fashion. Use this code on your first order above ₹2000." 
-                code="WELCOME500" 
-                color="bg-secondary" 
-              />
-              <PromotionalCard 
-                discount="BUY 1 GET 1" 
-                title="Weekend Special" 
-                description="Mix and match your favorite accessories this weekend." 
-                color="bg-zinc-900" 
-              />
+      {/* ===== HOW IT WORKS ===== */}
+      <section className="section">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <div className="section-eye">In four steps</div>
+              <h2>How <em>Apna</em> works.</h2>
+              <p className="section-sub">Sign in, drop a pin, find a piece, try it on — all within an evening. No app store, no waiting.</p>
             </div>
           </div>
-        </section>
-
-        {/* 9. CUSTOMER TESTIMONIALS SECTION */}
-        <section className="section-padding bg-accent/30">
-          <div className="container-default">
-            <motion.div initial="hidden" whileInView="visible" viewport={{ once: true }} variants={fadeUpVariant} className="text-center mb-16">
-              <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">Loved by Shoppers</h2>
-              <p className="text-muted-foreground text-lg">Hear what our community has to say.</p>
-            </motion.div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              <TestimonialCard 
-                name="Priya Sharma" 
-                role="Fashion Blogger" 
-                rating={5} 
-                text="I love how easy it is to discover hidden gems in my city. The quality of clothes from local boutiques is phenomenal and delivery is super fast!"
-              />
-              <TestimonialCard 
-                name="Rahul Verma" 
-                role="Verified Buyer" 
-                rating={5} 
-                text="The ability to see what's in store before visiting is a game changer. Apna Fashion Mart saves me hours of mall hopping."
-              />
-              <TestimonialCard 
-                name="Ananya Patel" 
-                role="Regular Shopper" 
-                rating={4} 
-                text="Great collection and secure payments. I had an issue with sizing once, but their return process was perfectly smooth and hassle-free."
-              />
-            </div>
+          <div className="steps stagger">
+            {howItWorks.map(s => (
+              <article key={s.n} className="step reveal">
+                <div className="num">{s.n}</div>
+                <h4>{s.t}</h4>
+                <p>{s.s}</p>
+              </article>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* 10. NEARBY STORES MAP SECTION */}
-        <section className="section-padding bg-white">
-          <div className="container-default">
-            <div className="flex flex-col lg:flex-row gap-12 items-center">
-              <div className="w-full lg:w-1/3">
-                <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-6">Find Boutiques Near You</h2>
-                <p className="text-muted-foreground text-lg mb-8 leading-relaxed">
-                  Our interactive map shows you exactly where the best fashion is hiding. View store hours, get directions, and explore collections before you step out.
-                </p>
-                <ul className="space-y-4 mb-8">
-                  <li className="flex items-center gap-3 text-foreground"><MapPin className="text-secondary w-5 h-5"/> Location-based radius search</li>
-                  <li className="flex items-center gap-3 text-foreground"><Compass className="text-secondary w-5 h-5"/> Turn-by-turn navigation</li>
-                  <li className="flex items-center gap-3 text-foreground"><Store className="text-secondary w-5 h-5"/> Real-time open/close status</li>
-                </ul>
-                <Button className="btn-primary rounded-full w-full sm:w-auto" onClick={() => router.push('/nearby-shops')}>
-                  Explore Map View
-                </Button>
-              </div>
-              <div className="w-full lg:w-2/3 h-[300px] sm:h-[400px] lg:h-[500px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white">
-                <MapView />
-              </div>
+      <section className="section section-mist">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <div className="section-eye">Verified · Hand-picked</div>
+              <h2>Featured <em>boutiques</em> near you.</h2>
+              <p className="section-sub">Independent storefronts, vetted on-site, curated for your neighborhood.</p>
             </div>
+            <AfmButton variant="ghost" onClick={() => setView('nearby')}>
+              View all boutiques
+              <ArrowRight size={16} />
+            </AfmButton>
           </div>
-        </section>
 
-        {/* 11. PREMIUM FEATURES SECTION */}
-        <section className="section-padding bg-primary text-white">
-          <div className="container-default">
-            <div className="text-center mb-16">
-              <h2 className="text-2xl sm:text-4xl font-bold font-serif mb-4">Platform Features</h2>
-              <p className="text-white/70 text-lg max-w-2xl mx-auto">Everything you need for a seamless fashion shopping experience.</p>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 sm:gap-8">
-              {[
-                { icon: MapPin, title: "Location Discovery" },
-                { icon: Search, title: "Advanced Filters" },
-                { icon: Heart, title: "Smart Wishlist" },
-                { icon: ShieldCheck, title: "Secure Checkout" },
-                { icon: Truck, title: "Live Tracking" },
-                { icon: Smartphone, title: "AI Assistant" },
-                { icon: Phone, title: "Direct Chat" },
-                { icon: Store, title: "Store Planning" },
-                { icon: Star, title: "Verified Reviews" },
-                { icon: Compass, title: "Recommendations" }
-              ].map((feat, idx) => (
-                <div key={idx} className="flex flex-col items-center text-center group">
-                  <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center mb-4 group-hover:bg-secondary transition-colors duration-300">
-                    <feat.icon className="w-8 h-8 text-white" />
+          <div className="featured-grid stagger">
+            {boutiques.map(b => (
+              <article key={b.id} className={`boutique-card reveal ${b.verified ? 'gold' : ''}`} onClick={() => setView('product')}>
+                <div className="boutique-cover" style={{ backgroundImage: `url(${b.img}), ${b.bg}` }}>
+                  <span className="boutique-dist"><MapPin size={11}/>{b.distance}</span>
+                  {b.verified && <span className="boutique-verified"><Check size={16}/></span>}
+                  <div className="boutique-cover-inner">
+                    <h3 className="boutique-cover-name">{b.name}</h3>
+                    <div className="boutique-cover-meta">
+                      <MapPin size={11}/> {b.area}
+                    </div>
                   </div>
-                  <h4 className="font-semibold text-sm">{feat.title}</h4>
                 </div>
-              ))}
+                <div className="boutique-body">
+                  <div className="boutique-tags">
+                    {b.tags.map(t => <span key={t} className="boutique-tag">{t}</span>)}
+                  </div>
+                  <div className="boutique-cta">
+                    <span className="rating"><span className="star"><Star size={12}/></span>{b.rating} <span style={{ color: 'var(--fg-muted)', fontWeight: 400 }}>· {b.reviews}</span></span>
+                    <span className="view">View boutique <ChevronRight size={14}/></span>
+                  </div>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== CATEGORIES ===== */}
+      <section className="section" style={{ paddingTop: 40 }}>
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <div className="section-eye">Browse by aisle</div>
+              <h2>Shop every <em>category</em>.</h2>
+              <p className="section-sub">From handloom ethnic wear to streetwear sneakers — every aisle, hand-picked from local boutiques.</p>
             </div>
           </div>
-        </section>
-
-        {/* 13. FAQ SECTION */}
-        <section className="section-padding bg-muted/30">
-          <div className="container-default max-w-4xl">
-            <div className="text-center mb-12">
-              <h2 className="text-2xl sm:text-4xl font-bold text-primary font-serif mb-4">Common Questions</h2>
-              <p className="text-muted-foreground text-lg">Got questions? We've got answers.</p>
-            </div>
-
-            <Accordion type="single" collapsible className="w-full">
-              <FAQItem 
-                value="item-1" 
-                question="How do I know the boutiques are verified?" 
-                answer="Every store on Apna Fashion Mart undergoes a strict physical and digital verification process. Look for the blue 'Verified' checkmark on shop profiles." 
-              />
-              <FAQItem 
-                value="item-2" 
-                question="Can I return an item if it doesn't fit?" 
-                answer="Yes, we offer a hassle-free 7-day return policy for all online purchases, provided the tags are intact and the item is unworn." 
-              />
-              <FAQItem 
-                value="item-3" 
-                question="How fast is the delivery?" 
-                answer="Since you are shopping from local boutiques, we offer same-day or next-day delivery within your city limits." 
-              />
-              <FAQItem 
-                value="item-4" 
-                question="Is Cash on Delivery (COD) available?" 
-                answer="Absolutely. We offer Cash on Delivery for most pincodes, along with secure online payment options via credit/debit cards and UPI." 
-              />
-              <FAQItem 
-                value="item-5" 
-                question="Can I visit the store after reserving online?" 
-                answer="Yes! You can choose the 'Store Pickup' option at checkout. The boutique will keep your item ready for you to try and buy." 
-              />
-            </Accordion>
+          <div className="cats stagger">
+            {categories.map(c => (
+              <div key={c.id} className="cat reveal-scale"
+                   style={{ backgroundImage: `url(${c.img})` }}
+                   onClick={() => onCategoryClick?.(c.id)}>
+                <div>
+                  <div className="lab">{c.label}</div>
+                  <div className="ct">{c.items} pieces</div>
+                </div>
+              </div>
+            ))}
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* 12. CALL-TO-ACTION SECTION */}
-        <section className="py-24 bg-white relative overflow-hidden">
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-accent/50 rounded-l-full blur-3xl -z-10 translate-x-1/3"></div>
-          <div className="container-default relative z-10">
-            <div className="bg-primary rounded-[3rem] p-12 md:p-20 text-center text-white shadow-2xl relative overflow-hidden">
-              <div className="absolute inset-0 opacity-20 bg-[url('https://images.unsplash.com/photo-1675631082746-ef4c0c5ed67e')] bg-cover mix-blend-overlay"></div>
-              
-              <div className="relative z-10 max-w-3xl mx-auto">
-                <h2 className="text-3xl sm:text-5xl md:text-6xl font-bold font-serif mb-6 leading-tight">
-                  Join Apna Fashion Mart Today
-                </h2>
-                <p className="text-xl text-white/80 mb-10">
-                  Be part of the city's most exclusive fashion community. Discover trends, support local businesses, and elevate your wardrobe.
-                </p>
-                <div className="flex flex-col sm:flex-row gap-4 justify-center">
-                  <Button className="bg-secondary hover:bg-secondary/90 text-white rounded-full px-10 py-6 text-lg shadow-xl shadow-secondary/30">
-                    Sign Up Now
-                  </Button>
-                  <Button variant="outline" className="bg-white/10 hover:bg-white/20 border-white/30 text-white rounded-full px-10 py-6 text-lg backdrop-blur-sm">
-                    Download App
-                  </Button>
+      {/* ===== NEW ARRIVALS — velvet ===== */}
+      <section className="section section-velvet">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <div className="section-eye">Just dropped · This week</div>
+              <h2>New <em>arrivals</em>.</h2>
+              <p className="section-sub">Fresh pieces from local studios, before they hit the rest of the internet.</p>
+            </div>
+            <AfmButton variant="on-dark" onClick={() => setView('product')}>
+              Browse all
+              <ArrowRight size={16}/>
+            </AfmButton>
+          </div>
+
+          <div className="product-grid">
+            {products.slice(0,8).map(p => {
+              const disc = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
+              return (
+                <article key={p.id} className="product-card reveal" onClick={() => onProductClick(p)}>
+                  <div className="img" style={{ backgroundImage: `url(${p.img}), ${p.bg}`, backgroundSize: 'cover', backgroundPosition: 'center', position: 'relative' }}>
+                    <div className="badges">
+                      {p.badges?.includes('new') && <span className="b b-new">New</span>}
+                      {p.badges?.includes('sale') && disc > 0 && <span className="b b-sale">-{disc}%</span>}
+                      {p.is3d && <span className="b b-3d"><RotateCw size={11}/></span>}
+                    </div>
+                    <button
+                      className={`heart ${wishlist.has(p.id) ? 'on' : ''}`}
+                      onClick={(e) => { e.stopPropagation(); toggleWishlist(p.id); }}
+                      aria-label="Wishlist"
+                    >
+                      <Heart size={16}/>
+                    </button>
+                    {p.is3d && <span className="view3d-pill"><RotateCw size={11}/> View in 3D</span>}
+                    <button className="quick-add" onClick={(e) => { e.stopPropagation(); onAddToCart(p, 'M', p.colors?.[0] || '#001F3F'); }}>
+                      <ShoppingBag size={14}/> Quick add to bag
+                    </button>
+                  </div>
+                  <div className="body">
+                    <div className="store">by {p.store}</div>
+                    <div className="name">{p.name}</div>
+                    <div className="price-row">
+                      <div>
+                        {p.oldPrice && <div className="price-old">₹{p.oldPrice.toLocaleString('en-IN')}</div>}
+                        <div className="price">₹{p.price.toLocaleString('en-IN')}</div>
+                      </div>
+                      <span className="rate"><span className="star"><Star size={11}/></span>{p.rating}</span>
+                    </div>
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== CITY MARQUEE ===== */}
+      <div className="marquee" aria-hidden="true">
+        <div className="row">
+          {[...cities, ...cities, ...cities].map((c, i) => (
+            <span key={i} className="item"><span className="pin"></span>{c}</span>
+          ))}
+        </div>
+      </div>
+
+      {/* ===== TESTIMONIALS ===== */}
+      <section className="section">
+        <div className="container">
+          <div className="section-head">
+            <div>
+              <div className="section-eye">From the community</div>
+              <h2><em>Loved</em> by shoppers, trusted by boutiques.</h2>
+              <p className="section-sub">3,200+ reviews · 4.8 average · across the App Store, Play Store and Google.</p>
+            </div>
+          </div>
+          <div className="tests">
+            {testimonials.map(t => (
+              <div key={t.name} className="test">
+                <div className="rate">
+                  {[...Array(t.rating)].map((_, i) => <Star key={i} size={16} style={{ display: 'inline-block' }} />)}
+                </div>
+                <div className="quote">"{t.quote}"</div>
+                <div className="person">
+                  <div className="av">{t.name.charAt(0)}</div>
+                  <div>
+                    <div className="who">{t.name}</div>
+                    <div className="area">{t.area}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== APP DOWNLOAD BAND ===== */}
+      <section className="app-band">
+        <div className="container app-band-inner">
+          <div className="app-band-text">
+            <div className="app-band-eye">Now on iOS &amp; Android</div>
+            <h2>The boutique<br/>in <em>your pocket.</em></h2>
+            <p>Same boutiques. Same pieces. Faster ordering, push offers from shops near you, AR try-on, and live order tracking.</p>
+            <ul className="app-features">
+              {appFeatures.map(f => <li key={f}><span className="dot"></span>{f}</li>)}
+            </ul>
+            <div className="app-stores">
+              <a className="app-store-btn" href="#">
+                <span className="ic"></span>
+                <span><span className="lab1">Download on the</span><span className="lab2">App Store</span></span>
+              </a>
+              <a className="app-store-btn" href="#">
+                <span className="ic">▶</span>
+                <span><span className="lab1">Get it on</span><span className="lab2">Google Play</span></span>
+              </a>
+            </div>
+            <div className="app-band-qr">
+              <div className="qr"></div>
+              <div className="txt"><strong>Scan to install</strong>Open this on your phone camera</div>
+            </div>
+          </div>
+          <div className="app-phones">
+            <div className="app-phone left">
+              <div className="notch"></div>
+              <div className="screen" style={{ background: 'linear-gradient(160deg, #001F3F, #6D1B5C 60%, #FF1493)' }}>
+                <div style={{ position: 'absolute', inset: 0, padding: '60px 18px', color: '#fff' }}>
+                  <div style={{ font: '500 9px Poppins', textTransform: 'uppercase', letterSpacing: '0.18em', opacity: 0.7 }}>Apna style · Apna store</div>
+                  <div style={{ font: 'italic 600 26px/1.1 "Playfair Display", serif', marginTop: 12 }}>Your <span style={{ color: '#FFEDF7' }}>neighborhood,</span> in vogue.</div>
                 </div>
               </div>
             </div>
+            <div className="app-phone mid">
+              <div className="notch"></div>
+              <div className="screen" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1610030469983-98e550d6193c?w=600&q=80&auto=format&fit=crop)' }}>
+              </div>
+            </div>
+            <div className="app-phone right">
+              <div className="notch"></div>
+              <div className="screen" style={{ backgroundImage: 'url(https://images.unsplash.com/photo-1610189019687-b96d5d44b96f?w=600&q=80&auto=format&fit=crop)' }}>
+              </div>
+            </div>
           </div>
-        </section>
+        </div>
+      </section>
 
-        {/* 14. FOOTER */}
-        <Footer />
-      </div>
-    </>
+      {/* ===== TRUST BAR ===== */}
+      <section className="section" style={{ paddingTop: 80, paddingBottom: 80 }}>
+        <div className="container">
+          <div className="trust" style={{ border: '1px solid var(--border)', borderRadius: 24, background: '#fff' }}>
+            {trust.map(t => {
+              const Ico = t.ico === 'shield-check' ? ShieldCheck
+                : t.ico === 'pin' ? MapPin
+                : t.ico === 'truck' ? Truck
+                : RefreshCcw;
+              return (
+                <div key={t.t} className="trust-tile">
+                  <Ico className="ico"/>
+                  <h3>{t.t}</h3>
+                  <p>{t.s}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FAQ ===== */}
+      <section className="section" style={{ paddingTop: 40 }}>
+        <div className="container">
+          <div className="section-head" style={{ flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+            <div>
+              <div className="section-eye" style={{ textAlign: 'center' }}>Answers</div>
+              <h2 style={{ textAlign: 'center' }}>Frequent <em>questions.</em></h2>
+              <p className="section-sub" style={{ textAlign: 'center', margin: '0 auto' }}>Need something specific? Tap your boutique's chat from any product page.</p>
+            </div>
+          </div>
+          <div className="faq-list">
+            {[
+              { q: 'How are boutiques verified?', a: 'Every shop is visited in person by an Apna ops associate. We check the storefront, inventory, GST/KYC documents and product quality before issuing the blue verified badge — which can be revoked at any time.' },
+              { q: 'What does the 3D / 360° viewer show?', a: 'Hero products from verified boutiques are photographed on a 36-frame turntable. You drag to rotate, pinch to zoom, and tap "Try on" for AR (supported on flagship iPhones and Pixel devices).' },
+              { q: 'How fast is delivery?', a: 'Free same-day delivery on orders above ₹999 from verified partner boutiques within 10 km. Other shops self-fulfill or arrange courier — you can also collect in person.' },
+              { q: 'How do returns work?', a: '7-day no-questions-asked. Hand the package to the same delivery partner; refund initiated when the boutique acknowledges receipt.' },
+              { q: 'Is COD available?', a: 'Yes, COD is available across all four launch cities. Online payments via UPI, Razorpay (cards / wallets / netbanking) are also supported.' },
+              { q: 'How can my boutique join?', a: 'Tap "Become a Boutique" up top. KYC + GST + first 10 product photos. We aim to onboard within 48 hours of complete submission.' },
+            ].map((f, i) => (
+              <details key={i} className="faq-item" open={i === 0}>
+                <summary>
+                  <span className="q">{f.q}</span>
+                  <span className="ico"><Plus size={14}/></span>
+                </summary>
+                <div className="a">{f.a}</div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ===== FINAL CTA ===== */}
+      <section style={{ padding: '0 0 120px' }}>
+        <div className="container">
+          <div style={{
+            position: 'relative', overflow: 'hidden',
+            background: 'var(--gradient-aurora)', backgroundSize: '200% 200%',
+            animation: 'aurora-drift 24s ease-in-out infinite alternate',
+            borderRadius: 32, padding: '80px 64px', color: '#fff',
+            display: 'flex', flexDirection: 'column', alignItems: 'flex-start', maxWidth: 1080, margin: '0 auto'
+          }}>
+            <span className="hero-eyebrow" style={{ marginBottom: 16 }}>For your boutique</span>
+            <h2 style={{ color: '#fff', fontSize: 'clamp(36px, 5vw, 64px)', margin: '0 0 16px', maxWidth: 720 }}>
+              Open your storefront. <em style={{ fontStyle: 'italic', color: '#FFEDF7' }}>Onboard in 48 hours.</em>
+            </h2>
+            <p style={{ color: 'rgba(255,255,255,0.78)', maxWidth: 520, fontSize: 17, marginBottom: 28 }}>
+              Vetted, verified, and visible to thousands of nearby customers from day one. Zero setup fee. Pay only on a sale.
+            </p>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <AfmButton variant="primary">Apply to become our partner</AfmButton>
+              <AfmButton variant="on-dark">Read the playbook</AfmButton>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
   );
-};
+}
 
-export default HomePage;
+
+
+export default HomeView;

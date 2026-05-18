@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="vbBlue" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1DA1F2"></stop>
+      <stop offset="100%" stop-color="#0E72C6"></stop>
+    </linearGradient>
+    <radialGradient id="vbHalo" cx="0.5" cy="0.5" r="0.6">
+      <stop offset="0%" stop-color="#1DA1F2" stop-opacity="0.45"></stop>
+      <stop offset="100%" stop-color="#1DA1F2" stop-opacity="0"></stop>
+    </radialGradient>
+  </defs>
+  <circle cx="32" cy="32" r="30" fill="url(#vbHalo)"></circle>
+  
+  <path d="&#xA;    M32 4&#xA;    L37.4 8.0  L44.1 7.0&#xA;    L47.0 13.0 L52.9 16.0&#xA;    L52.0 22.6 L56.0 28.0&#xA;    L52.0 33.4 L52.9 40.0&#xA;    L47.0 43.0 L44.1 49.0&#xA;    L37.4 48.0 L32 52&#xA;    L26.6 48.0 L19.9 49.0&#xA;    L17.0 43.0 L11.1 40.0&#xA;    L12.0 33.4 L8.0 28.0&#xA;    L12.0 22.6 L11.1 16.0&#xA;    L17.0 13.0 L19.9 7.0&#xA;    L26.6 8.0 Z" fill="url(#vbBlue)"></path>
+  
+  <path d="&#xA;    M32 9&#xA;    L36.4 12.3 L41.9 11.5&#xA;    L44.3 16.4 L49.1 18.8&#xA;    L48.3 24.2 L51.6 28.6&#xA;    L48.3 33.0 L49.1 38.4&#xA;    L44.3 40.8 L41.9 45.7&#xA;    L36.4 44.9 L32 48&#xA;    L27.6 44.9 L22.1 45.7&#xA;    L19.7 40.8 L14.9 38.4&#xA;    L15.7 33.0 L12.4 28.6&#xA;    L15.7 24.2 L14.9 18.8&#xA;    L19.7 16.4 L22.1 11.5&#xA;    L27.6 12.3 Z" fill="none" stroke="#FFFFFF" stroke-width="0.5" opacity="0.35"></path>
+  
+  <path d="M22 31 L29 38 L43 23" stroke="#FFFFFF" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>

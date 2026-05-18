@@ -44,7 +44,7 @@ const CustomerLoginPage = () => {
         <div className="w-full max-w-md">
           <div className="text-center mb-8">
             <img
-              src="https://horizons-cdn.hostinger.com/44d9ad84-2168-4c2d-8800-da46d0c76523/91dbc1acd93f786cce6f28c63850eb2c.jpg"
+              src="/afm-logo.webp"
               alt="Logo"
               className="h-20 w-auto mx-auto mb-6 rounded shadow-sm"
             />
