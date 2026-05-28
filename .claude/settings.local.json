@@ -25,7 +25,8 @@
       "PowerShell(D:\\\\AndroidSDK\\\\platform-tools\\\\adb.exe -s emulator-5554 shell am start -n com.apnafashionmart.app.debug/com.apnafashionmart.app.MainActivity 2>&1)",
       "PowerShell(D:\\\\AndroidSDK\\\\platform-tools\\\\adb.exe -s emulator-5554 logcat -d -s \"flutter,AndroidRuntime,FATAL,art\" 2>&1)",
       "Bash(cd \"/c/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/Mobile App Version/\" && pwd && ls -la)",
-      "Read(//c/c/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/**)"
+      "Read(//c/c/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/**)",
+      "Bash(npm install *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\amans\\Downloads\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 (1)\\apps\\web\\src\\app\\account",
