@@ -8,8 +8,6 @@
    ============================================================ */
 
 /* In production: replace with next/font self-hosted. */
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=Poppins:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
-
 :root {
   /* ---------- BRAND CORE ---------- */
   --navy-900:    #001428;
@@ -60,9 +58,9 @@
   --fg-muted:    var(--neutral-500);
   --fg-subtle:   var(--neutral-400);
   --fg-on-dark:  var(--neutral-100);
-  --border:      var(--neutral-200);
-  --border-strong: var(--neutral-300);
-  --ring:        var(--magenta-600);
+  --afm-border:      var(--neutral-200);
+  --afm-border-strong: var(--neutral-300);
+  --afm-ring:        var(--magenta-600);
 
   /* ---------- GLASS ---------- */
   --glass-light-04: rgba(255, 255, 255, 0.04);
@@ -164,9 +162,9 @@
   --fg-body:     var(--neutral-300);
   --fg-muted:    var(--neutral-400);
   --fg-subtle:   var(--neutral-500);
-  --border:        rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.16);
-  --ring:        var(--magenta-500);
+  --afm-border:        rgba(255, 255, 255, 0.08);
+  --afm-border-strong: rgba(255, 255, 255, 0.16);
+  --afm-ring:        var(--magenta-500);
 }
 
 /* ============================================================
@@ -377,7 +375,7 @@ code, pre, kbd, samp {
   font: 400 var(--text-base) var(--font-body);
   color: var(--fg);
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--afm-border);
   border-radius: var(--radius);
   transition: border-color var(--duration-base) var(--ease-out-quart),
               box-shadow var(--duration-base) var(--ease-out-quart);
@@ -480,7 +478,7 @@ code, pre, kbd, samp {
    ============================================================ */
 .card {
   background: var(--bg-card);
-  border: 1px solid var(--border);
+  border: 1px solid var(--afm-border);
   border-radius: var(--radius-lg);
   box-shadow: var(--elev-2);
   transition: transform var(--duration-base) var(--ease-out-quart),

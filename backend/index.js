@@ -1,0 +1,64 @@
+const { verifyToken } = require('./src/auth');
+const { getDbUser } = require('./src/db');
+const { ok, error, options: optionsResponse } = require('./src/response');
+const products = require('./src/handlers/products');
+const shops = require('./src/handlers/shops');
+const orders = require('./src/handlers/orders');
+const cart = require('./src/handlers/cart');
+const wishlist = require('./src/handlers/wishlist');
+const profile = require('./src/handlers/profile');
+const addresses = require('./src/handlers/addresses');
+const reviews = require('./src/handlers/reviews');
+const categories = require('./src/handlers/categories');
+const uploads = require('./src/handlers/uploads');
+
+exports.handler = async (event) => {
+  if (event.httpMethod === 'OPTIONS') return optionsResponse();
+
+  const authHeader = event.headers?.Authorization || event.headers?.authorization;
+  const jwtUser = await verifyToken(authHeader);
+
+  let user = null;
+  if (jwtUser) {
+    const dbUser = await getDbUser(jwtUser.sub);
+    user = {
+      sub: jwtUser.sub,
+      email: jwtUser.email,
+      // Prefer DB role (authoritative); fall back to JWT claim
+      role: dbUser?.role || jwtUser.role,
+      dbId: dbUser?.id || null,
+      isActive: dbUser?.is_active ?? true,
+    };
+  }
+
+  const method = event.httpMethod;
+  const path = event.path || event.rawPath || '';
+  const pathParams = event.pathParameters || {};
+  const queryParams = event.queryStringParameters || {};
+  let body = {};
+
+  if (event.body) {
+    try { body = JSON.parse(event.body); } catch { return error(400, 'Invalid JSON body'); }
+  }
+
+  try {
+    const ctx = { user, method, path, pathParams, queryParams, body };
+
+    if (path.startsWith('/products'))  return await products.handle(ctx);
+    if (path.startsWith('/shops'))     return await shops.handle(ctx);
+    if (path.startsWith('/orders'))    return await orders.handle(ctx);
+    if (path.startsWith('/cart'))      return await cart.handle(ctx);
+    if (path.startsWith('/wishlist'))  return await wishlist.handle(ctx);
+    if (path.startsWith('/addresses')) return await addresses.handle(ctx);
+    if (path.startsWith('/reviews'))   return await reviews.handle(ctx);
+    if (path.startsWith('/categories'))return await categories.handle(ctx);
+    if (path.startsWith('/uploads'))   return await uploads.handle(ctx);
+    if (path.startsWith('/profile') || path.startsWith('/users')) return await profile.handle(ctx);
+
+    return error(404, 'Not found');
+  } catch (err) {
+    if (err.statusCode) return error(err.statusCode, err.message);
+    console.error('Unhandled error:', err);
+    return error(500, 'Internal server error');
+  }
+};

@@ -1,7 +1,15 @@
 import type { Metadata } from 'next';
 import './globals.css';
+import '../index.css';
+import '../views/_styles.css';
+import { AmplifyProvider } from '@/components/AmplifyProvider';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { CartProvider } from '@/contexts/CartContext';
 import { Toaster } from '@/components/ui/sonner';
+import RevealObserver from '@/components/RevealObserver';
+import StickyAppCta from '@/components/StickyAppCta';
+import CartDrawerGlobal from '@/components/CartDrawerGlobal';
+import AIChatBot from '@/components/AIChatBot';
 
 export const metadata: Metadata = {
   title: 'Apna Fashion Mart — Local Fashion Marketplace',
@@ -21,10 +29,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" suppressHydrationWarning>
       <body>
-        <AuthProvider>
-          {children}
-          <Toaster position="top-center" />
-        </AuthProvider>
+        <AmplifyProvider>
+          <AuthProvider>
+            <CartProvider>
+              {children}
+              <CartDrawerGlobal />
+              <AIChatBot />
+              <RevealObserver />
+              <StickyAppCta />
+              <Toaster position="top-center" />
+            </CartProvider>
+          </AuthProvider>
+        </AmplifyProvider>
       </body>
     </html>
   );

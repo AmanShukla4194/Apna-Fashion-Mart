@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Fragment } from 'react';
+import React, { useState, Fragment, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { Camera, Check, ChevronRight, MapPin, Maximize2, RefreshCcw, RotateCw, Search, ShieldCheck, ShoppingBag, Star, Sun, Truck, Wallet } from 'lucide-react';
@@ -8,18 +8,23 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AFM_DATA } from '@/lib/seed-data';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { useCart } from '@/contexts/CartContext';
+import { trackView, getRecentlyViewed } from '@/lib/recentlyViewed';
 
-// AfmButton kept for prototype compatibility — maps to shadcn Button
 function AfmButton({ variant='primary', size, children, onClick, className='' }) {
-  const sv = variant === 'primary' ? 'default' : variant === 'ghost' ? 'outline' : variant === 'on-dark' ? 'secondary' : 'ghost';
-  return <Button variant={sv} size={size} onClick={onClick} className={className}>{children}</Button>;
+  const cls = variant === 'on-dark'  ? 'afm-btn afm-btn-on-dark'
+            : variant === 'ghost'    ? 'afm-btn afm-btn-ghost'
+            : variant === 'light'    ? 'afm-btn afm-btn-light'
+            : 'afm-btn afm-btn-primary';
+  return <button className={`${cls}${size === 'sm' ? ' afm-btn-sm' : ''}${className ? ' ' + className : ''}`} onClick={onClick}>{children}</button>;
 }
 
 
 
 
 function PdTrustStrip() {
-  const I = AfmIcons;
   return (
     <div className="pd-trust-strip">
       <div className="cell"><div className="ico"><Truck size={16}/></div><div><div className="t">Free same-day</div><div className="s">From verified shops</div></div></div>
@@ -30,8 +35,7 @@ function PdTrustStrip() {
   );
 }
 
-function AiRecommendation() {
-  const I = AfmIcons;
+function AiRecommendation({ onSeeTheLook }) {
   return (
     <div className="ai-row">
       <div className="av">A</div>
@@ -40,13 +44,62 @@ function AiRecommendation() {
         <div className="h">Pair this saree with a Banarasi clutch from Mira Weaves?</div>
         <div className="s">Customers who bought from Aanya Atelier also added Mira Weaves' embroidered clutches 4× more often than average. Same neighborhood — both arrive together.</div>
       </div>
-      <button className="ai-cta">See the look →</button>
+      <button className="ai-cta" onClick={onSeeTheLook}>See the look →</button>
+    </div>
+  );
+}
+
+function ReviewForm({ productId, onSubmitted }) {
+  const [show, setShow] = React.useState(false);
+  const [rating, setRating] = React.useState(0);
+  const [hover, setHover] = React.useState(0);
+  const [title, setTitle] = React.useState('');
+  const [body, setBody] = React.useState('');
+  const [submitted, setSubmitted] = React.useState(false);
+
+  const submit = (e) => {
+    e.preventDefault();
+    if (!rating || !body.trim()) return;
+    setSubmitted(true);
+    setShow(false);
+    onSubmitted?.({ rating, title, body });
+  };
+
+  if (submitted) return (
+    <div className="review-form-thanks">
+      <span>✓</span> Thank you! Your review is pending moderation and will appear shortly.
+    </div>
+  );
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      {!show
+        ? <AfmButton variant="ghost" size="sm" onClick={() => setShow(true)}>Write a review</AfmButton>
+        : (
+          <form className="review-form" onSubmit={submit}>
+            <div className="rf-title">Share your experience</div>
+            <div className="rf-stars">
+              {[1,2,3,4,5].map(s => (
+                <button type="button" key={s}
+                  className={`rf-star ${s <= (hover || rating) ? 'on' : ''}`}
+                  onMouseEnter={() => setHover(s)} onMouseLeave={() => setHover(0)}
+                  onClick={() => setRating(s)}>★</button>
+              ))}
+              <span className="rf-star-label">{['','Poor','Fair','Good','Very good','Excellent'][hover || rating]}</span>
+            </div>
+            <input className="rf-input" placeholder="Review title (optional)" value={title} onChange={e => setTitle(e.target.value)} maxLength={80}/>
+            <textarea className="rf-textarea" placeholder="Tell others what you thought — fit, quality, fabric, delivery…" value={body} onChange={e => setBody(e.target.value)} rows={4} required maxLength={1000}/>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <AfmButton variant="primary" size="sm">Submit review</AfmButton>
+              <AfmButton variant="ghost" size="sm" onClick={() => setShow(false)}>Cancel</AfmButton>
+            </div>
+          </form>
+        )}
     </div>
   );
 }
 
 function ReviewSummary({ reviews, breakdown, rating }) {
-  const I = AfmIcons;
   return (
     <div className="review-summary">
       <div className="score">
@@ -98,7 +151,7 @@ function ReviewCard({ r }) {
   );
 }
 
-function AppPromoCard() {
+function AppPromoCard({ onAppLink }) {
   return (
     <div className="app-promo-card">
       <div>
@@ -106,8 +159,8 @@ function AppPromoCard() {
         <div className="h">AR try-on lives in the <em>app.</em></div>
         <div className="s">Plus push offers from boutiques near you, voice-search, and 1-tap reorder.</div>
         <div className="badges">
-          <a href="#"></a>
-          <a href="#">▶</a>
+          <a href="#" onClick={onAppLink}> App Store</a>
+          <a href="#" onClick={onAppLink}>▶ Google Play</a>
         </div>
       </div>
       <div className="qr"></div>
@@ -116,7 +169,6 @@ function AppPromoCard() {
 }
 
 function ProductView({ product, onAddToCart, onProductClick }) {
-  const I = AfmIcons;
   const p = product || AFM_DATA.products[0];
   const { products, specs, inBox, sizeChart, reviews, ratingBreakdown } = AFM_DATA;
   const [tab, setTab] = useState('3d');
@@ -129,8 +181,25 @@ function ProductView({ product, onAddToCart, onProductClick }) {
   const sameStore = products.filter(x => x.store === p.store && x.id !== p.id && x.subcat !== p.subcat).slice(0, 4);
   const alsoViewed = products.filter(x => x.category === p.category && x.gender === p.gender && x.id !== p.id).slice(0, 8);
 
+  const [recentlyViewedProducts, setRecentlyViewedProducts] = useState([]);
+  const [pdToast, setPdToast] = useState(null);
+  const [qaInput, setQaInput] = useState('');
+
+  const showPdToast = (msg) => { setPdToast(msg); setTimeout(() => setPdToast(null), 3500); };
+
+  useEffect(() => {
+    const ids = getRecentlyViewed().filter(id => String(id) !== String(p.id));
+    const prods = ids.map(id => products.find(x => String(x.id) === String(id))).filter(Boolean).slice(0, 8);
+    setRecentlyViewedProducts(prods);
+  }, [p.id]);
+
   return (
     <main>
+      {pdToast && (
+        <div style={{ position:'fixed', bottom:24, right:24, background:'var(--navy-800)', color:'#fff', padding:'12px 20px', borderRadius:12, font:'500 14px Poppins', zIndex:9999, boxShadow:'0 4px 16px rgba(0,0,0,0.25)', maxWidth:340 }}>
+          {pdToast}
+        </div>
+      )}
       <div className="container">
         <div style={{ padding: '24px 0 0', font: '400 12px Poppins, sans-serif', color: 'var(--fg-muted)', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>Home</span><ChevronRight size={12}/><span>Ethnic wear</span><ChevronRight size={12}/><span>Sarees</span><ChevronRight size={12}/>
@@ -152,9 +221,9 @@ function ProductView({ product, onAddToCart, onProductClick }) {
               <div className="pd-3d-shadow"></div>
 
               <div className="pd-3d-controls">
-                <button title="Reset"><RotateCw size={16}/></button>
-                <button title="Fullscreen"><Maximize2 size={16}/></button>
-                <button title="Lighting"><Sun size={16}/></button>
+                <button title="Reset" onClick={() => showPdToast('3D view reset to default angle')}><RotateCw size={16}/></button>
+                <button title="Fullscreen" onClick={() => showPdToast('Fullscreen 3D viewer available in the mobile app')}><Maximize2 size={16}/></button>
+                <button title="Lighting" onClick={() => showPdToast('Lighting: Studio mode active')}><Sun size={16}/></button>
               </div>
 
               <span className="pd-zoom-hint"><Search size={11}/> Hover to zoom · drag to rotate</span>
@@ -168,7 +237,7 @@ function ProductView({ product, onAddToCart, onProductClick }) {
                 <div key={i} style={{
                   width: 56, height: 72, borderRadius: 10,
                   backgroundImage: `url(${p.img})`, backgroundSize: 'cover', backgroundPosition: `${20 + i*15}% center`,
-                  border: i === 0 ? '2px solid var(--magenta-600)' : '1px solid var(--border)',
+                  border: i === 0 ? '2px solid var(--magenta-600)' : '1px solid var(--afm-border)',
                   opacity: i === 0 ? 1 : 0.7, cursor: 'pointer'
                 }}></div>
               ))}
@@ -212,7 +281,8 @@ function ProductView({ product, onAddToCart, onProductClick }) {
               ))}
               <button className="pd-size oos">XXL</button>
             </div>
-            <button style={{ background: 'transparent', border: 0, color: 'var(--magenta-600)', font: '500 12px Poppins', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', marginBottom: 18, padding: 0 }}>📏 View size chart &amp; fit guide</button>
+            <button style={{ background: 'transparent', border: 0, color: 'var(--magenta-600)', font: '500 12px Poppins', textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', marginBottom: 18, padding: 0 }}
+                    onClick={() => setBottomTab('size')}>📏 View size chart &amp; fit guide</button>
 
             <div className="pd-group-label">Color</div>
             <div className="pd-colors">
@@ -225,7 +295,7 @@ function ProductView({ product, onAddToCart, onProductClick }) {
               <AfmButton variant="primary" onClick={() => onAddToCart(p, size, color)}>
                 <ShoppingBag size={18}/> Add to bag · ₹{p.price.toLocaleString('en-IN')}
               </AfmButton>
-              <AfmButton variant="ghost">
+              <AfmButton variant="ghost" onClick={() => showPdToast('AR try-on available in the Apna iOS and Android app')}>
                 <Camera size={16}/> AR try-on
               </AfmButton>
             </div>
@@ -238,12 +308,12 @@ function ProductView({ product, onAddToCart, onProductClick }) {
               </div>
             </div>
 
-            <AppPromoCard/>
+            <AppPromoCard onAppLink={(e) => { e.preventDefault(); showPdToast('iOS and Android app coming soon!'); }}/>
           </div>
         </div>
 
         {/* ===== AI Recommendations ===== */}
-        <AiRecommendation/>
+        <AiRecommendation onSeeTheLook={() => alsoViewed[0] && onProductClick(alsoViewed[0].id)} />
 
         {/* ===== KEY FEATURES HIGHLIGHT ===== */}
         <section style={{ marginTop: 56 }}>
@@ -341,7 +411,7 @@ function ProductView({ product, onAddToCart, onProductClick }) {
 
         {/* ===== TABBED LONG-FORM ===== */}
         <section style={{ marginTop: 56 }}>
-          <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--border)', marginBottom: 24, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 8, borderBottom: '1px solid var(--afm-border)', marginBottom: 24, flexWrap: 'wrap' }}>
             {[
               ['specs', 'Specifications'],
               ['box', "What's in the box"],
@@ -487,8 +557,14 @@ function ProductView({ product, onAddToCart, onProductClick }) {
             ))}
           </div>
           <div className="qa-ask">
-            <input className="input" placeholder="Ask a question about this product…"/>
-            <AfmButton variant="primary" size="sm">Ask</AfmButton>
+            <input
+              className="input"
+              placeholder="Ask a question about this product…"
+              value={qaInput}
+              onChange={e => setQaInput(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && qaInput.trim()) { showPdToast('Question submitted! The boutique will respond within 24 hours.'); setQaInput(''); } }}
+            />
+            <AfmButton variant="primary" size="sm" onClick={() => { if (qaInput.trim()) { showPdToast('Question submitted! The boutique will respond within 24 hours.'); setQaInput(''); } else { showPdToast('Please type your question first'); } }}>Ask</AfmButton>
           </div>
         </section>
 
@@ -499,10 +575,10 @@ function ProductView({ product, onAddToCart, onProductClick }) {
               <div className="section-eye">From verified buyers</div>
               <h2 style={{ fontSize: 32 }}>Customer <em>reviews</em>.</h2>
             </div>
-            <AfmButton variant="ghost" size="sm">Write a review</AfmButton>
           </div>
 
           <ReviewSummary reviews={reviews} breakdown={ratingBreakdown} rating={p.rating}/>
+          <ReviewForm productId={p.id} />
 
           <div className="review-list">
             {reviews.map(r => <ReviewCard key={r.name} r={r}/>)}
@@ -597,26 +673,28 @@ function ProductView({ product, onAddToCart, onProductClick }) {
         </section>
 
         {/* ===== RECENTLY VIEWED ===== */}
-        <section style={{ margin: '64px 0 80px' }}>
-          <div className="section-head" style={{ marginBottom: 18 }}>
-            <div>
-              <div className="section-eye">Continue browsing</div>
-              <h2 style={{ fontSize: 32 }}>Recently <em>viewed</em>.</h2>
-            </div>
-          </div>
-          <div className="recent-strip">
-            {[...alsoViewed].reverse().map(s => (
-              <div key={s.id} className="recent-card">
-                <div className="img" style={{ backgroundImage: `url(${s.img}), ${s.bg}`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
-                <div className="body">
-                  <div className="store">by {s.store}</div>
-                  <div className="name">{s.name}</div>
-                  <div className="price">₹{s.price.toLocaleString('en-IN')}</div>
-                </div>
+        {(recentlyViewedProducts.length > 0 || alsoViewed.length > 0) && (
+          <section style={{ margin: '64px 0 80px' }}>
+            <div className="section-head" style={{ marginBottom: 18 }}>
+              <div>
+                <div className="section-eye">Continue browsing</div>
+                <h2 style={{ fontSize: 32 }}>Recently <em>viewed</em>.</h2>
               </div>
-            ))}
-          </div>
-        </section>
+            </div>
+            <div className="recent-strip">
+              {(recentlyViewedProducts.length > 0 ? recentlyViewedProducts : [...alsoViewed].reverse()).map(s => (
+                <div key={s.id} className="recent-card" style={{ cursor: 'pointer' }} onClick={() => onProductClick(s.id)}>
+                  <div className="img" style={{ backgroundImage: `url(${s.img}), ${s.bg}`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
+                  <div className="body">
+                    <div className="store">by {s.store}</div>
+                    <div className="name">{s.name}</div>
+                    <div className="price">₹{s.price.toLocaleString('en-IN')}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </div>
     </main>
   );
@@ -624,4 +702,24 @@ function ProductView({ product, onAddToCart, onProductClick }) {
 
 
 
-export default ProductView;
+export default function ProductDetailPage({ id }) {
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const product = AFM_DATA.products?.find(p => String(p.id) === String(id)) ?? AFM_DATA.products?.[0] ?? null;
+
+  useEffect(() => {
+    if (product) trackView(product.id);
+  }, [product?.id]);
+
+  return (
+    <>
+      <Header />
+      <ProductView
+        product={product}
+        onAddToCart={addToCart}
+        onProductClick={(pid) => router.push('/product/' + pid)}
+      />
+      <Footer />
+    </>
+  );
+}

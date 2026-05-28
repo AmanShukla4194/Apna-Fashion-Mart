@@ -1,21 +1,35 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase/client';
+import {
+  signIn as amplifySignIn,
+  signUp as amplifySignUp,
+  signOut as amplifySignOut,
+  getCurrentUser,
+  fetchAuthSession,
+  fetchUserAttributes,
+} from 'aws-amplify/auth';
+import { configureAmplify } from '../lib/aws/config';
 
 const AuthContext = createContext(null);
 
 const defaultAuthValue = {
   currentUser: null,
   profile: null,
+  user: null,
+  session: null,
+  loading: true,
+  initialLoading: true,
   isAuthenticated: false,
   isCustomer: false,
   isVendor: false,
   isAdmin: false,
-  initialLoading: true,
   login: async () => {},
   logout: async () => {},
   signup: async () => {},
+  signIn: async () => {},
+  signUp: async () => {},
+  signOut: async () => {},
   updateProfile: async () => {},
 };
 
@@ -27,83 +41,139 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [profile, setProfile] = useState(null);
+  const [session, setSession] = useState(null);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  const fetchProfile = async (userId) => {
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
-    setProfile(data);
-    return data;
-  };
-
+  // Configure Amplify once on mount
   useEffect(() => {
-    // Get current session on mount
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setCurrentUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id).finally(() => setInitialLoading(false));
-      else setInitialLoading(false);
-    });
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setCurrentUser(session?.user ?? null);
-      if (session?.user) fetchProfile(session.user.id);
-      else setProfile(null);
-    });
-
-    return () => subscription.unsubscribe();
+    configureAmplify();
+    restoreSession();
   }, []);
 
-  const login = async (email, password) => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
-    const userProfile = await fetchProfile(data.user.id);
-    return { user: data.user, profile: userProfile };
+  const restoreSession = async () => {
+    try {
+      const cognitoUser = await getCurrentUser();
+      const [authSession, attributes] = await Promise.all([
+        fetchAuthSession(),
+        fetchUserAttributes(),
+      ]);
+      const token = authSession.tokens?.idToken?.toString() ?? null;
+      setSession({ token, userId: cognitoUser.userId });
+
+      const userObj = buildUserObject(cognitoUser, attributes);
+      setCurrentUser(userObj);
+
+      // Fetch profile from API to get role and extra fields
+      try {
+        const { getUserProfile } = await import('../lib/api');
+        const apiProfile = await getUserProfile();
+        setProfile(apiProfile);
+        setCurrentUser((prev) => ({ ...prev, role: apiProfile.role }));
+      } catch {
+        // profile endpoint may not exist yet — role defaults to 'customer'
+      }
+    } catch {
+      // no session
+      setCurrentUser(null);
+      setProfile(null);
+      setSession(null);
+    } finally {
+      setInitialLoading(false);
+    }
   };
 
-  const signup = async (email, password, name, role = 'customer') => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
+  const buildUserObject = (cognitoUser, attributes) => ({
+    id: cognitoUser.userId,
+    username: cognitoUser.username,
+    email: attributes?.email ?? '',
+    name: attributes?.name ?? attributes?.['custom:name'] ?? '',
+    role: attributes?.['custom:role'] ?? 'customer',
+  });
+
+  const login = async (email, password) => {
+    configureAmplify();
+    const { isSignedIn, nextStep } = await amplifySignIn({ username: email, password });
+    if (!isSignedIn) return { nextStep };
+
+    const [cognitoUser, authSession, attributes] = await Promise.all([
+      getCurrentUser(),
+      fetchAuthSession(),
+      fetchUserAttributes(),
+    ]);
+
+    const token = authSession.tokens?.idToken?.toString() ?? null;
+    setSession({ token, userId: cognitoUser.userId });
+
+    const userObj = buildUserObject(cognitoUser, attributes);
+    setCurrentUser(userObj);
+
+    // Fetch profile for role
+    try {
+      const { getUserProfile } = await import('../lib/api');
+      const apiProfile = await getUserProfile();
+      setProfile(apiProfile);
+      setCurrentUser((prev) => ({ ...prev, role: apiProfile.role }));
+      return { user: userObj, profile: apiProfile };
+    } catch {
+      setProfile(null);
+      return { user: userObj, profile: null };
+    }
+  };
+
+  const signup = async (email, password, metadata = {}) => {
+    configureAmplify();
+    const { isSignUpComplete, userId, nextStep } = await amplifySignUp({
+      username: email,
       password,
-      options: { data: { name, role } },
+      options: {
+        userAttributes: {
+          email,
+          name: metadata.name ?? '',
+          'custom:role': metadata.role ?? 'customer',
+        },
+      },
     });
-    if (error) throw error;
-    return data;
+    return { isSignUpComplete, userId, nextStep };
   };
 
   const logout = async () => {
-    await supabase.auth.signOut();
+    configureAmplify();
+    await amplifySignOut();
     setCurrentUser(null);
     setProfile(null);
+    setSession(null);
   };
 
   const updateProfile = async (updates) => {
-    if (!currentUser) return;
-    const { data, error } = await supabase
-      .from('profiles')
-      .update({ ...updates, updated_at: new Date().toISOString() })
-      .eq('id', currentUser.id)
-      .select()
-      .single();
-    if (error) throw error;
-    setProfile(data);
-    return data;
+    const { updateUserProfile } = await import('../lib/api');
+    const updated = await updateUserProfile(updates);
+    setProfile(updated);
+    if (updates.name || updates.role) {
+      setCurrentUser((prev) => ({ ...prev, ...updates }));
+    }
+    return updated;
   };
+
+  const role = currentUser?.role ?? profile?.role ?? 'customer';
 
   const value = {
     currentUser,
     profile,
-    login,
-    signup,
-    logout,
-    updateProfile,
+    user: currentUser,
+    session,
+    loading: initialLoading,
+    initialLoading,
     isAuthenticated: !!currentUser,
-    isCustomer: profile?.role === 'customer',
-    isVendor: profile?.role === 'vendor',
-    isAdmin: profile?.role === 'admin',
+    isCustomer: role === 'customer',
+    isVendor: role === 'vendor',
+    isAdmin: role === 'admin',
+    login,
+    logout,
+    signup,
+    signIn: login,
+    signOut: logout,
+    signUp: signup,
+    updateProfile,
   };
 
   if (initialLoading) {

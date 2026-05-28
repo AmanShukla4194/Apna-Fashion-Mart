@@ -130,6 +130,7 @@ export const AFM_DATA = {
       img: 'https://images.unsplash.com/photo-1693987644236-3c440256784b?w=800&q=80&auto=format&fit=crop',
       bg: 'linear-gradient(160deg, #11375E 0%, #001F3F 65%, #001428 100%)',
       x: 36, y: 42,
+      lat: 19.0596, lng: 72.8295,
       initial: 'Aa',
     },
     {
@@ -146,6 +147,7 @@ export const AFM_DATA = {
       img: 'https://images.unsplash.com/photo-1583391733956-3750e0ff4e8b?w=800&q=80&auto=format&fit=crop',
       bg: 'linear-gradient(160deg, #FF55B0 0%, #CC1377 60%, #6D1B5C 100%)',
       x: 62, y: 28,
+      lat: 19.0734, lng: 72.8262,
       initial: 'Mw',
     },
     {
@@ -162,6 +164,7 @@ export const AFM_DATA = {
       img: 'https://images.unsplash.com/photo-1701759164397-d49e71987ab5?w=800&q=80&auto=format&fit=crop',
       bg: 'linear-gradient(160deg, #2F3A4A 0%, #1B2230 100%)',
       x: 28, y: 70,
+      lat: 19.1276, lng: 72.8285,
       initial: 'Ks',
     },
     {
@@ -178,6 +181,7 @@ export const AFM_DATA = {
       img: 'https://images.unsplash.com/photo-1563099599-7d779f2b3b86?w=800&q=80&auto=format&fit=crop',
       bg: 'linear-gradient(160deg, #C9A24A 0%, #8B6E2A 100%)',
       x: 72, y: 62,
+      lat: 19.0633, lng: 72.8362,
       initial: 'Rb',
     },
   ],

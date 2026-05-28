@@ -8,20 +8,28 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AFM_DATA } from '@/lib/seed-data';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { useCart } from '@/contexts/CartContext';
 
-// AfmButton kept for prototype compatibility — maps to shadcn Button
 function AfmButton({ variant='primary', size, children, onClick, className='' }) {
-  const sv = variant === 'primary' ? 'default' : variant === 'ghost' ? 'outline' : variant === 'on-dark' ? 'secondary' : 'ghost';
-  return <Button variant={sv} size={size} onClick={onClick} className={className}>{children}</Button>;
+  const cls = variant === 'on-dark'  ? 'afm-btn afm-btn-on-dark'
+            : variant === 'ghost'    ? 'afm-btn afm-btn-ghost'
+            : variant === 'light'    ? 'afm-btn afm-btn-light'
+            : 'afm-btn afm-btn-primary';
+  return <button className={`${cls}${size === 'sm' ? ' afm-btn-sm' : ''}${className ? ' ' + className : ''}`} onClick={onClick}>{children}</button>;
 }
 
 
 
 function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishlist, onCategoryClick }) {
-  const I = AfmIcons;
   const { boutiques, products, trust, cities, categories, howItWorks, testimonials, appFeatures } = AFM_DATA;
+  const [appToast, setAppToast] = React.useState(false);
+  const showAppToast = (e) => { e.preventDefault(); setAppToast(true); setTimeout(() => setAppToast(false), 3000); };
 
   return (
+    <>
+    <Header setView={setView} />
     <main>
       {/* ===== HERO ===== */}
       <section className="hero">
@@ -304,6 +312,11 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
 
       {/* ===== APP DOWNLOAD BAND ===== */}
       <section className="app-band">
+        {appToast && (
+          <div style={{ position:'fixed', bottom:24, right:24, background:'var(--navy-800)', color:'#fff', padding:'12px 20px', borderRadius:12, font:'500 14px Poppins', zIndex:9999, boxShadow:'0 4px 16px rgba(0,0,0,0.25)' }}>
+            iOS and Android app coming soon!
+          </div>
+        )}
         <div className="container app-band-inner">
           <div className="app-band-text">
             <div className="app-band-eye">Now on iOS &amp; Android</div>
@@ -313,11 +326,11 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
               {appFeatures.map(f => <li key={f}><span className="dot"></span>{f}</li>)}
             </ul>
             <div className="app-stores">
-              <a className="app-store-btn" href="#">
+              <a className="app-store-btn" href="#" onClick={showAppToast}>
                 <span className="ic"></span>
                 <span><span className="lab1">Download on the</span><span className="lab2">App Store</span></span>
               </a>
-              <a className="app-store-btn" href="#">
+              <a className="app-store-btn" href="#" onClick={showAppToast}>
                 <span className="ic">▶</span>
                 <span><span className="lab1">Get it on</span><span className="lab2">Google Play</span></span>
               </a>
@@ -354,7 +367,7 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
       {/* ===== TRUST BAR ===== */}
       <section className="section" style={{ paddingTop: 80, paddingBottom: 80 }}>
         <div className="container">
-          <div className="trust" style={{ border: '1px solid var(--border)', borderRadius: 24, background: '#fff' }}>
+          <div className="trust" style={{ border: '1px solid var(--afm-border)', borderRadius: 24, background: '#fff' }}>
             {trust.map(t => {
               const Ico = t.ico === 'shield-check' ? ShieldCheck
                 : t.ico === 'pin' ? MapPin
@@ -421,16 +434,36 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
               Vetted, verified, and visible to thousands of nearby customers from day one. Zero setup fee. Pay only on a sale.
             </p>
             <div style={{ display: 'flex', gap: 12 }}>
-              <AfmButton variant="primary">Apply to become our partner</AfmButton>
-              <AfmButton variant="on-dark">Read the playbook</AfmButton>
+              <AfmButton variant="primary" onClick={() => setView('vendor-dashboard')}>Apply to become our partner</AfmButton>
+              <AfmButton variant="on-dark" onClick={() => setView('legal-vendor')}>Read the playbook</AfmButton>
             </div>
           </div>
         </div>
       </section>
     </main>
+    <Footer />
+    </>
   );
 }
 
 
 
-export default HomeView;
+export default function HomePage() {
+  const router = useRouter();
+  const { addToCart } = useCart();
+  const [wishlist, setWishlist] = React.useState(new Set());
+  const toggleWishlist = (id) => setWishlist(prev => {
+    const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
+  });
+  const nav = (v) => { const m = { home:'/', nearby:'/nearby-shops', cart:'/cart', wishlist:'/wishlist', account:'/account', categories:'/categories', category:'/categories', checkout:'/checkout', 'vendor-dashboard':'/vendor-dashboard', 'legal-vendor':'/legal/vendor' }; router.push(m[v] ?? '/'); };
+  return (
+    <HomeView
+      setView={nav}
+      onProductClick={(id) => router.push('/product/' + id)}
+      onAddToCart={addToCart}
+      wishlist={wishlist}
+      toggleWishlist={toggleWishlist}
+      onCategoryClick={(cat) => router.push('/categories?cat=' + encodeURIComponent(cat))}
+    />
+  );
+}

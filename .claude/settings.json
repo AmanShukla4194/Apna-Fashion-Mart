@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -v \"^ui$\")",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\" -Recurse -Depth 3)",
+      "Bash(Select-Object FullName)",
+      "PowerShell(Get-ChildItem -Path \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\" -Recurse -Depth 2 | ForEach-Object { $_.FullName } | head -150)",
+      "Bash(npx next *)",
+      "PowerShell(ls -R \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\export\\\\ui_kits\")",
+      "PowerShell(head -50)",
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\apps\\\\web\\\\src\\\\views\\\\_styles.css\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\export\\\\ui_kits\\\\website\\\\styles.css\" | Measure-Object -Line\\).Lines)",
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\export\\\\apps\\\\web\\\\src\\\\views\\\\_styles.css\" | Measure-Object -Line\\).Lines)",
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\apps\\\\web\\\\src\" -Recurse -Filter \"*.tsx\" -o File)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\amans\\Downloads\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 (1)\\apps\\web\\src\\app\\legal\\[doc]"
+    ]
+  }
+}

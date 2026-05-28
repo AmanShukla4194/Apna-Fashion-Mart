@@ -1,5 +1,4 @@
-// Auto-generated Supabase database types
-// Regenerate with: npx supabase gen types typescript --project-id YOUR_PROJECT_ID > src/types/database.ts
+// Database types for Apna Fashion Mart (AWS RDS Aurora PostgreSQL)
 
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 

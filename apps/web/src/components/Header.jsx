@@ -2,13 +2,24 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   Heart, Layers, MapPin, Menu, Search, ShieldCheck, ShoppingBag, Store, User, X,
 } from 'lucide-react';
+import { useCart } from '@/contexts/CartContext';
 
-export default function Header({ view, setView, cartCount, onOpenCart }) {
+export default function Header({ view, setView }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const { cartCount, openCart } = useCart();
+  const router = useRouter();
   const go = (v) => { setView?.(v); setMenuOpen(false); };
+  const handleSearch = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      router.push('/categories?q=' + encodeURIComponent(searchQuery.trim()));
+      setSearchQuery('');
+    }
+  };
 
   return (
     <header className="afm-header">
@@ -40,7 +51,12 @@ export default function Header({ view, setView, cartCount, onOpenCart }) {
 
           <div className="afm-search">
             <Search size={18} />
-            <input placeholder="Search trending styles, boutiques, neighborhoods…" />
+            <input
+              placeholder="Search trending styles, boutiques, neighborhoods…"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              onKeyDown={handleSearch}
+            />
           </div>
 
           <nav className="afm-nav">
@@ -49,15 +65,15 @@ export default function Header({ view, setView, cartCount, onOpenCart }) {
             <Link className={view === 'categories' ? 'active' : ''} href="/categories" onClick={() => setView?.('categories')}>Categories</Link>
             <a href="#download" onClick={(e) => { e.preventDefault(); const el = document.querySelector('.app-band'); if (el) window.scrollTo({ top: el.offsetTop - 80, behavior: 'smooth' }); }}>Get the app</a>
             <Link className="afm-icon-btn" href="/wishlist" aria-label="Wishlist" onClick={() => setView?.('wishlist')}><Heart size={20} /></Link>
-            <button className="afm-icon-btn" aria-label="Bag" onClick={onOpenCart}>
+            <button className="afm-icon-btn" aria-label="Bag" onClick={openCart}>
               <ShoppingBag size={20} />
               {cartCount > 0 && <span className="afm-cart-count">{cartCount}</span>}
             </button>
           </nav>
 
           <div className="afm-account">
-            <Link href="/login" className="afm-btn-ghost">Customer Login</Link>
-            <Link href="/shop-login" className="afm-btn-primary">Shop Owner Login</Link>
+            <Link href="/login" className="afm-btn afm-btn-ghost">Customer Login</Link>
+            <Link href="/shop-login" className="afm-btn afm-btn-primary">Shop Owner Login</Link>
           </div>
 
           <button className="afm-mobile-toggle" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
@@ -77,7 +93,7 @@ export default function Header({ view, setView, cartCount, onOpenCart }) {
           <Link className={`item ${view === 'nearby' ? 'on' : ''}`} href="/nearby-shops" onClick={() => go('nearby')}><MapPin size={16}/> Nearby Shops</Link>
           <Link className={`item ${view === 'categories' ? 'on' : ''}`} href="/categories" onClick={() => go('categories')}><Layers size={16}/> Categories</Link>
           <Link className={`item ${view === 'wishlist' ? 'on' : ''}`} href="/wishlist" onClick={() => go('wishlist')}><Heart size={16}/> Wishlist</Link>
-          <button className={`item ${view === 'cart' ? 'on' : ''}`} onClick={() => { onOpenCart?.(); setMenuOpen(false); }}>
+          <button className={`item ${view === 'cart' ? 'on' : ''}`} onClick={() => { openCart(); setMenuOpen(false); }}>
             <ShoppingBag size={16}/> Your bag
             {cartCount > 0 && <span style={{ marginLeft: 'auto', background: 'var(--magenta-600)', color: '#fff', padding: '2px 8px', borderRadius: 99, fontSize: 11 }}>{cartCount}</span>}
           </button>
@@ -88,8 +104,8 @@ export default function Header({ view, setView, cartCount, onOpenCart }) {
           <Link className="item" href="/legal/privacy">Privacy</Link>
           <Link className="item" href="/legal/terms">Terms</Link>
           <div className="actions">
-            <Link href="/login" className="afm-btn-ghost">Customer Login</Link>
-            <Link href="/shop-login" className="afm-btn-primary">Shop Owner Login</Link>
+            <Link href="/login" className="afm-btn afm-btn-ghost">Customer Login</Link>
+            <Link href="/shop-login" className="afm-btn afm-btn-primary">Shop Owner Login</Link>
           </div>
         </div>
       </div>

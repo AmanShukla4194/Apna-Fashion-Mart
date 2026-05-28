@@ -8,10 +8,12 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AFM_DATA } from '@/lib/seed-data';
 
-// AfmButton kept for prototype compatibility — maps to shadcn Button
 function AfmButton({ variant='primary', size, children, onClick, className='' }) {
-  const sv = variant === 'primary' ? 'default' : variant === 'ghost' ? 'outline' : variant === 'on-dark' ? 'secondary' : 'ghost';
-  return <Button variant={sv} size={size} onClick={onClick} className={className}>{children}</Button>;
+  const cls = variant === 'on-dark'  ? 'afm-btn afm-btn-on-dark'
+            : variant === 'ghost'    ? 'afm-btn afm-btn-ghost'
+            : variant === 'light'    ? 'afm-btn afm-btn-light'
+            : 'afm-btn afm-btn-primary';
+  return <button className={`${cls}${size === 'sm' ? ' afm-btn-sm' : ''}${className ? ' ' + className : ''}`} onClick={onClick}>{children}</button>;
 }
 
 
@@ -31,31 +33,31 @@ function Footer() {
           <div>
             <h4>Shop</h4>
             <ul>
-              <li><a href="category.html?c=women">Women</a></li>
-              <li><a href="category.html?c=men">Men</a></li>
-              <li><a href="category.html?c=kids">Kids</a></li>
-              <li><a href="category.html?c=ethnic">Ethnic Wear</a></li>
-              <li><a href="category.html?c=street">Streetwear</a></li>
-              <li><a href="category.html?c=acc">Accessories</a></li>
+              <li><Link href="/categories?c=women">Women</Link></li>
+              <li><Link href="/categories?c=men">Men</Link></li>
+              <li><Link href="/categories?c=kids">Kids</Link></li>
+              <li><Link href="/categories?c=ethnic">Ethnic Wear</Link></li>
+              <li><Link href="/categories?c=street">Streetwear</Link></li>
+              <li><Link href="/categories?c=acc">Accessories</Link></li>
             </ul>
           </div>
           <div>
             <h4>For Boutiques</h4>
             <ul>
-              <li><a href="legal.html?doc=vendor">Open your storefront</a></li>
-              <li><a href="legal.html?doc=vendor#verify">Verification process</a></li>
-              <li><a href="legal.html?doc=vendor#commission">Commission &amp; payouts</a></li>
-              <li><a href="legal.html?doc=vendor#standards">Listing standards</a></li>
-              <li><a href="legal.html?doc=vendor">Vendor Agreement</a></li>
+              <li><Link href="/legal/vendor">Open your storefront</Link></li>
+              <li><Link href="/legal/vendor#verify">Verification process</Link></li>
+              <li><Link href="/legal/vendor#commission">Commission &amp; payouts</Link></li>
+              <li><Link href="/legal/vendor#standards">Listing standards</Link></li>
+              <li><Link href="/legal/vendor">Vendor Agreement</Link></li>
             </ul>
           </div>
           <div>
             <h4>Apna Fashion Mart</h4>
             <ul>
               <li><a href="https://www.latticeteams.com" target="_blank" rel="noreferrer">Our story · Lattice Teams</a></li>
-              <li><a href="nearby.html">Cities we serve</a></li>
-              <li><a href="legal.html?doc=privacy">Privacy</a></li>
-              <li><a href="legal.html?doc=terms">Terms of Service</a></li>
+              <li><Link href="/nearby-shops">Cities we serve</Link></li>
+              <li><Link href="/legal/privacy">Privacy</Link></li>
+              <li><Link href="/legal/terms">Terms of Service</Link></li>
               <li><a href="mailto:contact@latticeteams.com">Contact &amp; support</a></li>
             </ul>
           </div>
@@ -65,9 +67,9 @@ function Footer() {
           <span>© 2023 – 2026 Lattice Teams. All rights reserved. · Apna Fashion Mart is a Lattice Teams product</span>
           <span style={{ display: 'flex', gap: 18 }}>
             <span>Built for clients worldwide · <a href="https://www.latticeteams.com" target="_blank" rel="noreferrer" style={{ color: 'rgba(255,255,255,0.65)' }}>latticeteams.com</a></span>
-            <a href="legal.html?doc=privacy">Privacy</a>
-            <a href="legal.html?doc=terms">Terms</a>
-            <a href="legal.html?doc=vendor">Vendor Agreement</a>
+            <Link href="/legal/privacy">Privacy</Link>
+            <Link href="/legal/terms">Terms</Link>
+            <Link href="/legal/vendor">Vendor Agreement</Link>
           </span>
         </div>
       </div>

@@ -1,0 +1,82 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+          xmlns:tools="http://schemas.android.com/tools">
+
+  <!-- ── Permissions ──────────────────────────────────────────────────── -->
+  <uses-permission android:name="android.permission.INTERNET"/>
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+  <uses-permission android:name="android.permission.CAMERA"/>
+  <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+  <uses-permission
+      android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+      android:maxSdkVersion="28"/>
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+  <uses-permission android:name="android.permission.VIBRATE"/>
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+  <application
+      android:label="Apna Fashion Mart"
+      android:name="${applicationName}"
+      android:icon="@mipmap/ic_launcher"
+      android:roundIcon="@mipmap/ic_launcher_round"
+      android:allowBackup="false"
+      android:theme="@style/LaunchTheme"
+      android:hardwareAccelerated="true"
+      android:usesCleartextTraffic="false">
+
+    <!-- Explicitly declare Flutter v2 embedding so the build tool doesn't fail -->
+    <meta-data
+        android:name="flutterEmbedding"
+        android:value="2" />
+
+    <!-- ── Main activity ──────────────────────────────────────────────── -->
+    <activity
+        android:name=".MainActivity"
+        android:exported="true"
+        android:launchMode="singleTop"
+        android:taskAffinity=""
+        android:theme="@style/NormalTheme"
+        android:windowSoftInputMode="adjustResize">
+
+      <!-- Launcher intent -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.MAIN"/>
+        <category android:name="android.intent.category.LAUNCHER"/>
+      </intent-filter>
+
+      <!-- Deep links: https://apnafashionmart.com/... -->
+      <intent-filter android:autoVerify="true">
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="https" android:host="apnafashionmart.com"/>
+      </intent-filter>
+
+      <!-- Custom scheme: apnafashionmart://... -->
+      <intent-filter>
+        <action android:name="android.intent.action.VIEW"/>
+        <category android:name="android.intent.category.DEFAULT"/>
+        <category android:name="android.intent.category.BROWSABLE"/>
+        <data android:scheme="apnafashionmart"/>
+      </intent-filter>
+
+    </activity>
+
+    <!-- FCM messaging service — re-enable once google-services.json is added -->
+
+    <!-- ── Razorpay checkout ──────────────────────────────────────────── -->
+    <activity
+        android:name="com.razorpay.CheckoutActivity"
+        android:exported="false"
+        android:theme="@style/Checkout"
+        android:hardwareAccelerated="true"
+        tools:replace="android:theme"/>
+
+    <!-- ── Google Maps API key ───────────────────────────────────────── -->
+    <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="${GOOGLE_MAPS_API_KEY}"/>
+
+  </application>
+
+</manifest>

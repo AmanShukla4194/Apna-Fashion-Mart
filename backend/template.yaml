@@ -1,0 +1,126 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Apna Fashion Mart API
+
+Globals:
+  Function:
+    Runtime: nodejs20.x
+    Timeout: 30
+    MemorySize: 512
+    Environment:
+      Variables:
+        DB_HOST: !Ref DBHost
+        DB_PORT: "5432"
+        DB_NAME: !Ref DBName
+        DB_USER: !Ref DBUser
+        COGNITO_USER_POOL_ID: !Ref CognitoUserPoolId
+        COGNITO_CLIENT_ID: !Ref CognitoClientId
+        ALLOWED_ORIGIN: !Ref AllowedOrigin
+        S3_BUCKET_NAME: !Ref S3BucketName
+        CLOUDFRONT_URL: !Ref CloudFrontUrl
+        AWS_REGION: ap-south-1
+
+Parameters:
+  DBHost:
+    Type: String
+    Description: Aurora PostgreSQL writer endpoint
+  DBName:
+    Type: String
+    Default: postgres
+    Description: Database name
+  DBUser:
+    Type: String
+    Default: postgres
+    Description: Database username (IAM auth — no password stored)
+  CognitoUserPoolId:
+    Type: String
+    Description: Cognito User Pool ID (e.g. ap-south-1_XXXXXXXXX)
+  CognitoClientId:
+    Type: String
+    Description: Cognito App Client ID
+  AllowedOrigin:
+    Type: String
+    Default: "https://apnafashionmart.com"
+    Description: CORS allowed origin
+  S3BucketName:
+    Type: String
+    Description: S3 bucket name for media uploads (e.g. apna-fashion-mart-media)
+  CloudFrontUrl:
+    Type: String
+    Description: CloudFront distribution URL (e.g. https://d3tgg59fq5q8wc.cloudfront.net)
+
+Resources:
+
+  # ─── Main API Lambda ────────────────────────────────────────────────────────
+  AfmApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: index.handler
+      Description: AFM main API — products, shops, orders, cart, wishlist, uploads
+      Policies:
+        # IAM auth for RDS Aurora
+        - AmazonRDSDataFullAccess
+        # S3 upload pre-signing
+        - Statement:
+            - Effect: Allow
+              Action:
+                - s3:PutObject
+                - s3:GetObject
+              Resource: !Sub "arn:aws:s3:::${S3BucketName}/*"
+      Events:
+        ApiProxy:
+          Type: HttpApi
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+            ApiId: !Ref AfmHttpApi
+        ApiRoot:
+          Type: HttpApi
+          Properties:
+            Path: /
+            Method: ANY
+            ApiId: !Ref AfmHttpApi
+
+  # ─── Cognito Post-Confirmation Trigger ──────────────────────────────────────
+  AfmAuthTriggerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      CodeUri: ./
+      Handler: src/auth-trigger.handler
+      Description: Inserts user into DB after Cognito email confirmation
+      Policies:
+        - AmazonRDSDataFullAccess
+
+  # ─── HTTP API Gateway ────────────────────────────────────────────────────────
+  AfmHttpApi:
+    Type: AWS::Serverless::HttpApi
+    Properties:
+      CorsConfiguration:
+        AllowOrigins:
+          - !Ref AllowedOrigin
+          - "http://localhost:3000"
+        AllowHeaders:
+          - Content-Type
+          - Authorization
+        AllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        MaxAge: 86400
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${AfmHttpApi}.execute-api.${AWS::Region}.amazonaws.com"
+    Export:
+      Name: AfmApiUrl
+  ApiLambdaArn:
+    Description: Main API Lambda ARN
+    Value: !GetAtt AfmApiFunction.Arn
+  AuthTriggerArn:
+    Description: Cognito trigger Lambda ARN — wire this to your User Pool Post Confirmation trigger
+    Value: !GetAtt AfmAuthTriggerFunction.Arn

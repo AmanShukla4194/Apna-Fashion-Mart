@@ -3,29 +3,64 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
-import { Check, Heart, MapPin, Minus, Package, Plus, RefreshCcw, ShieldCheck, Trash2, Truck } from 'lucide-react';
+import { Check, Heart, MapPin, Minus, Package, Plus, RefreshCcw, ShieldCheck, Trash2, Truck, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AFM_DATA } from '@/lib/seed-data';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import { useCart } from '@/contexts/CartContext';
 
-// AfmButton kept for prototype compatibility — maps to shadcn Button
 function AfmButton({ variant='primary', size, children, onClick, className='' }) {
-  const sv = variant === 'primary' ? 'default' : variant === 'ghost' ? 'outline' : variant === 'on-dark' ? 'secondary' : 'ghost';
-  return <Button variant={sv} size={size} onClick={onClick} className={className}>{children}</Button>;
+  const cls = variant === 'on-dark'  ? 'afm-btn afm-btn-on-dark'
+            : variant === 'ghost'    ? 'afm-btn afm-btn-ghost'
+            : variant === 'light'    ? 'afm-btn afm-btn-light'
+            : 'afm-btn afm-btn-primary';
+  return <button className={`${cls}${size === 'sm' ? ' afm-btn-sm' : ''}${className ? ' ' + className : ''}`} onClick={onClick}>{children}</button>;
 }
 
+const VALID_COUPONS = {
+  WELCOME500: { desc: 'Flat ₹500 off above ₹2,000', fn: (sub) => sub > 2000 ? 500 : 0 },
+  HDFC10:     { desc: '10% off HDFC cards · max ₹500', fn: (sub) => Math.min(Math.round(sub * 0.10), 500) },
+  APNA5:      { desc: 'App-only 5% off first order', fn: (sub) => Math.round(sub * 0.05) },
+};
 
-
+const SAVED_ADDRESSES = [
+  { lab: 'HOME · default', name: 'Priya Sharma', body: '14, Carter Road, near Carter Sq Café · Bandra West · Mumbai 400050', phone: '+91 98210 ••••• 47' },
+  { lab: 'WORK', name: 'Priya Sharma', body: 'Indiabulls Centre, 14th floor · Senapati Bapat Marg · Mumbai 400013', phone: '+91 98210 ••••• 47' },
+  { lab: 'MOTHER', name: 'Lata Sharma', body: '7, Saraswati Vihar · CG Road · Ahmedabad 380009', phone: '+91 99250 ••••• 12' },
+];
 
 function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWishlist }) {
-  const I = AfmIcons;
   const { products } = AFM_DATA;
   const [slot, setSlot] = useState('today');
   const [appliedCoupon, setAppliedCoupon] = useState('WELCOME500');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoError, setPromoError] = useState('');
   const [savedItems, setSavedItems] = useState(products.slice(8, 12));
+  const [giftWrap, setGiftWrap] = useState(false);
+  const [showAddressSelect, setShowAddressSelect] = useState(false);
+  const [selectedAddress, setSelectedAddress] = useState(0);
+  const [toast, setToast] = useState(null);
 
-  // Group items by store
+  const showToast = (msg, type = 'success') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const applyPromo = () => {
+    const code = promoCode.trim().toUpperCase();
+    if (VALID_COUPONS[code]) {
+      setAppliedCoupon(code);
+      setPromoCode('');
+      setPromoError('');
+      showToast(`Coupon ${code} applied!`);
+    } else {
+      setPromoError('Invalid code. Try WELCOME500, HDFC10 or APNA5.');
+    }
+  };
+
   const byStore = items.reduce((acc, it) => {
     (acc[it.store] = acc[it.store] || []).push(it);
     return acc;
@@ -34,10 +69,12 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
   const mrp = items.reduce((s, i) => s + ((i.oldPrice || i.price) * i.qty), 0);
   const productDiscount = mrp - subtotal;
-  const couponDiscount = appliedCoupon === 'WELCOME500' && subtotal > 2000 ? 500 : 0;
+  const couponInfo = VALID_COUPONS[appliedCoupon];
+  const couponDiscount = couponInfo ? couponInfo.fn(subtotal) : 0;
+  const giftWrapFee = giftWrap ? 49 * items.length : 0;
   const delivery = subtotal > 999 ? 0 : 40;
   const platformFee = 9;
-  const total = subtotal - couponDiscount + delivery + platformFee;
+  const total = subtotal - couponDiscount + giftWrapFee + delivery + platformFee;
   const totalSavings = productDiscount + couponDiscount + (subtotal > 999 ? 40 : 0);
 
   const updateQty = (id, size, delta) => {
@@ -79,10 +116,17 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
     );
   }
 
+  const addr = SAVED_ADDRESSES[selectedAddress];
+
   return (
     <main>
+      {toast && (
+        <div style={{ position:'fixed', bottom:24, right:24, background: toast.type==='error' ? '#DC2626' : 'var(--navy-800)', color:'#fff', padding:'12px 20px', borderRadius:12, font:'500 14px Poppins', zIndex:9999, boxShadow:'0 4px 16px rgba(0,0,0,0.25)', maxWidth:320 }}>
+          {toast.msg}
+        </div>
+      )}
+
       <div className="container cart-page">
-        {/* HEAD + PROGRESS */}
         <div className="head">
           <div>
             <div style={{ font: '500 11px Poppins', textTransform: 'uppercase', letterSpacing: '0.22em', color: 'var(--fg-muted)' }}>{items.length} items · {Object.keys(byStore).length} boutiques · Mumbai</div>
@@ -100,21 +144,38 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
         </div>
 
         <div className="cart-grid">
-          {/* LEFT COLUMN */}
           <div>
             {/* DELIVERY ADDRESS */}
             <div className="cart-section">
               <h3>Deliver to</h3>
-              <div className="cart-addr">
-                <span className="ic"><MapPin size={16}/></span>
-                <div className="info">
-                  <div className="lab">HOME · default</div>
-                  <div className="name">Priya Sharma</div>
-                  <div className="body">14, Carter Road, near Carter Sq Café · Bandra West · Mumbai 400050</div>
-                  <div className="phone">+91 98210 ••••• 47</div>
+              {showAddressSelect ? (
+                <div style={{ display:'flex', flexDirection:'column', gap:8, marginBottom:8 }}>
+                  {SAVED_ADDRESSES.map((a, i) => (
+                    <div key={i} className="cart-addr" style={{ cursor:'pointer', border: i === selectedAddress ? '2px solid var(--magenta-600)' : undefined }}
+                         onClick={() => { setSelectedAddress(i); setShowAddressSelect(false); showToast(`Delivering to ${a.lab}`); }}>
+                      <span className="ic"><MapPin size={16}/></span>
+                      <div className="info">
+                        <div className="lab">{a.lab}</div>
+                        <div className="name">{a.name}</div>
+                        <div className="body">{a.body}</div>
+                      </div>
+                      {i === selectedAddress && <Check size={16} style={{ color:'var(--magenta-600)', flexShrink:0 }}/>}
+                    </div>
+                  ))}
+                  <button className="afm-btn afm-btn-ghost" style={{ marginTop:4 }} onClick={() => showToast('Add new address — feature coming soon')}>+ Add new address</button>
                 </div>
-                <button className="change">Change ▾</button>
-              </div>
+              ) : (
+                <div className="cart-addr">
+                  <span className="ic"><MapPin size={16}/></span>
+                  <div className="info">
+                    <div className="lab">{addr.lab}</div>
+                    <div className="name">{addr.name}</div>
+                    <div className="body">{addr.body}</div>
+                    <div className="phone">{addr.phone}</div>
+                  </div>
+                  <button className="change" onClick={() => setShowAddressSelect(true)}>Change ▾</button>
+                </div>
+              )}
             </div>
 
             {/* DELIVERY SLOT */}
@@ -182,11 +243,13 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
                           <div className="delivery"><Truck size={12}/> Free same-day delivery</div>
                           <div className="promo">★ 12 % off with HDFC card · use HDFC10 at checkout</div>
                           <div className="actions">
-                            <a onClick={() => moveToSaved(item.id, item.size)}><Heart size={12}/> Save for later</a>
+                            <a onClick={() => moveToSaved(item.id, item.size)} style={{ cursor:'pointer' }}><Heart size={12}/> Save for later</a>
                             <span className="sep">·</span>
-                            <a onClick={() => removeItem(item.id, item.size)}><Trash2 size={12}/> Remove</a>
+                            <a onClick={() => removeItem(item.id, item.size)} style={{ cursor:'pointer' }}><Trash2 size={12}/> Remove</a>
                             <span className="sep">·</span>
-                            <a><Package size={12}/> Gift wrap (₹49)</a>
+                            <a onClick={() => { setGiftWrap(v => !v); showToast(giftWrap ? 'Gift wrap removed' : `Gift wrap added · ₹49 per item`); }} style={{ cursor:'pointer', color: giftWrap ? 'var(--magenta-600)' : undefined }}>
+                              <Package size={12}/> Gift wrap (₹49){giftWrap ? ' ✓' : ''}
+                            </a>
                           </div>
                         </div>
                         <div className="right">
@@ -244,7 +307,7 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
               <div className="sub-head">Customers who bought these pieces also added these · ships in the same delivery</div>
               <div className="recent-strip">
                 {products.filter(p => !items.some(i => i.id === p.id)).slice(0, 6).map(p => (
-                  <div key={p.id} className="recent-card" onClick={() => onProductClick(p)}>
+                  <div key={p.id} className="recent-card" style={{ cursor:'pointer' }} onClick={() => onProductClick(p)}>
                     <div className="img" style={{ backgroundImage: `url(${p.img}), ${p.bg}`, backgroundSize: 'cover', backgroundPosition: 'center' }}></div>
                     <div className="body">
                       <div className="store">by {p.store}</div>
@@ -265,19 +328,29 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
 
               {/* PROMO */}
               <div className="cart-promo">
-                <input className="input" placeholder="Enter promo code"/>
-                <button>Apply</button>
+                <input
+                  className="input"
+                  placeholder="Enter promo code"
+                  value={promoCode}
+                  onChange={e => { setPromoCode(e.target.value.toUpperCase()); setPromoError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && applyPromo()}
+                />
+                <button onClick={applyPromo}>Apply</button>
               </div>
+              {promoError && <div style={{ font:'400 12px Poppins', color:'#DC2626', marginTop:-8, marginBottom:8 }}>{promoError}</div>}
+
               <div className="cart-coupons" style={{ marginBottom: 18 }}>
-                <div className={`cart-coupon ${appliedCoupon === 'WELCOME500' ? 'applied' : ''}`}>
+                <div className={`cart-coupon ${appliedCoupon === 'WELCOME500' ? 'applied' : ''}`} style={{ cursor:'pointer' }}
+                     onClick={() => { setAppliedCoupon('WELCOME500'); showToast('Coupon WELCOME500 applied!'); }}>
                   <span className="code">WELCOME500</span>
                   <span className="desc">Flat ₹500 off above ₹2,000<small>Applied automatically · first order</small></span>
                   <span className="apply">{appliedCoupon === 'WELCOME500' ? '✓ Applied' : 'Apply'}</span>
                 </div>
-                <div className="cart-coupon">
+                <div className={`cart-coupon ${appliedCoupon === 'HDFC10' ? 'applied' : ''}`} style={{ cursor:'pointer' }}
+                     onClick={() => { setAppliedCoupon('HDFC10'); showToast('Coupon HDFC10 applied — 10% off!'); }}>
                   <span className="code">HDFC10</span>
                   <span className="desc">10 % off · HDFC credit cards<small>Apply at payment · max ₹500</small></span>
-                  <span className="apply">Tap to apply</span>
+                  <span className="apply">{appliedCoupon === 'HDFC10' ? '✓ Applied' : 'Tap to apply'}</span>
                 </div>
               </div>
 
@@ -285,14 +358,17 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
               <div className="cart-bill-row"><span className="l">Bag total (MRP)</span><span className="v">₹{mrp.toLocaleString('en-IN')}</span></div>
               <div className="cart-bill-row discount"><span className="l">Discount on MRP</span><span className="v">− ₹{productDiscount.toLocaleString('en-IN')}</span></div>
               {couponDiscount > 0 && (
-                <div className="cart-bill-row discount"><span className="l">Coupon · WELCOME500</span><span className="v">− ₹{couponDiscount}</span></div>
+                <div className="cart-bill-row discount"><span className="l">Coupon · {appliedCoupon}</span><span className="v">− ₹{couponDiscount}</span></div>
               )}
+              {giftWrap && <div className="cart-bill-row"><span className="l">Gift wrap (×{items.length})</span><span className="v">₹{giftWrapFee}</span></div>}
               <div className="cart-bill-row"><span className="l">Subtotal</span><span className="v">₹{subtotal.toLocaleString('en-IN')}</span></div>
               <div className="cart-bill-row"><span className="l">Local delivery</span><span className="v" style={{ color: delivery === 0 ? 'var(--success-500)' : '' }}>{delivery === 0 ? 'Free' : `₹${delivery}`}</span></div>
               <div className="cart-bill-row"><span className="l">Platform fee</span><span className="v">₹{platformFee}</span></div>
               <div className="cart-bill-row total"><span className="l">Total</span><span className="v">₹{total.toLocaleString('en-IN')}</span></div>
               <div className="you-save">★ You're saving ₹{totalSavings.toLocaleString('en-IN')} on this order</div>
-              <button className="checkout"><ShieldCheck size={16}/> Proceed to secure checkout</button>
+              <button className="checkout" onClick={() => setView('checkout')}>
+                <ShieldCheck size={16}/> Proceed to secure checkout
+              </button>
               <div className="secure"><ShieldCheck size={11}/> 256-bit TLS · powered by Razorpay</div>
 
               <div className="cart-payment-icons">
@@ -320,4 +396,26 @@ function CartView({ items, setItems, setView, onProductClick, wishlist, toggleWi
 
 
 
-export default CartView;
+export default function CartPage() {
+  const router = useRouter();
+  const { items, setItems, addToCart } = useCart();
+  const [wishlist, setWishlist] = React.useState(new Set());
+  const toggleWishlist = (id) => setWishlist(prev => {
+    const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
+  });
+  const nav = (v) => { const m = { home:'/', nearby:'/nearby-shops', wishlist:'/wishlist', account:'/account', checkout:'/checkout' }; router.push(m[v] ?? '/'); };
+  return (
+    <>
+      <Header setView={nav} />
+      <CartView
+        items={items}
+        setItems={setItems}
+        setView={nav}
+        onProductClick={(id) => router.push('/product/' + id)}
+        wishlist={wishlist}
+        toggleWishlist={toggleWishlist}
+      />
+      <Footer />
+    </>
+  );
+}

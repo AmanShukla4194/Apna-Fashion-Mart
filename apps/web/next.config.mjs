@@ -1,16 +1,15 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true,
     remotePatterns: [
+      { protocol: 'https', hostname: '**.amazonaws.com' },
+      { protocol: 'https', hostname: '**.cloudfront.net' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
-      { protocol: 'https', hostname: '*.supabase.co' },
-      { protocol: 'https', hostname: '*.r2.dev' },
-      { protocol: 'https', hostname: 'horizons-cdn.hostinger.com' },
     ],
   },
-  trailingSlash: true,
-  transpilePackages: [],
+  experimental: {
+    serverComponentsExternalPackages: ['pg'],
+  },
 };
 
 export default nextConfig;

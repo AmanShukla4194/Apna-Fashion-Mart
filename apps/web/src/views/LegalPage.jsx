@@ -5,14 +5,19 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { ChevronRight, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AFM_DATA } from '@/lib/seed-data';
 
 // AfmButton kept for prototype compatibility — maps to shadcn Button
 function AfmButton({ variant='primary', size, children, onClick, className='' }) {
-  const sv = variant === 'primary' ? 'default' : variant === 'ghost' ? 'outline' : variant === 'on-dark' ? 'secondary' : 'ghost';
-  return <Button variant={sv} size={size} onClick={onClick} className={className}>{children}</Button>;
+  const cls = variant === 'on-dark'  ? 'afm-btn afm-btn-on-dark'
+            : variant === 'ghost'    ? 'afm-btn afm-btn-ghost'
+            : variant === 'light'    ? 'afm-btn afm-btn-light'
+            : 'afm-btn afm-btn-primary';
+  return <button className={`${cls}${size === 'sm' ? ' afm-btn-sm' : ''}${className ? ' ' + className : ''}`} onClick={onClick}>{children}</button>;
 }
 
 
@@ -46,7 +51,7 @@ const LEGAL_DOCS = {
         ] },
       { id: 'share', h: 'Who we share with',
         body: [
-          'We share data with three categories of partners, each governed by a written data-processing agreement: payment processors (Razorpay, Stripe), delivery partners (Shiprocket, Delhivery, the boutique you ordered from), and infrastructure providers (Supabase, Cloudflare).',
+          'We share data with three categories of partners, each governed by a written data-processing agreement: payment processors (Razorpay, Stripe), delivery partners (Shiprocket, Delhivery, the boutique you ordered from), and infrastructure providers (Amazon Web Services, Cloudflare).',
           'We never sell your data. We never share it for advertising outside Apna Fashion Mart. We never share verification documents with anyone except the auditor and you.',
         ] },
       { id: 'retain', h: 'How long we keep it',
@@ -138,7 +143,6 @@ const LEGAL_DOCS = {
 };
 
 function LegalView() {
-  const I = AfmIcons;
   // pick doc from window var or url query ?doc=privacy|terms|vendor
   let key = (typeof window !== 'undefined' && window.AFM_LEGAL_DOC) || 'privacy';
   if (typeof window !== 'undefined') {
@@ -189,7 +193,7 @@ function LegalView() {
           ))}
           <h4 style={{ marginTop: 28 }}>Other documents</h4>
           {Object.entries(LEGAL_DOCS).filter(([k]) => k !== key).map(([k, d]) => (
-            <a key={k} href={`legal.html?doc=${k}`}>{d.title} →</a>
+            <Link key={k} href={`/legal/${k}`}>{d.title} →</Link>
           ))}
         </aside>
 
@@ -225,4 +229,13 @@ function LegalView() {
 
 
 
-export default LegalView;
+export default function LegalPage({ doc }) {
+  if (typeof window !== 'undefined' && doc) window.AFM_LEGAL_DOC = doc;
+  return (
+    <>
+      <Header />
+      <LegalView />
+      <Footer />
+    </>
+  );
+}

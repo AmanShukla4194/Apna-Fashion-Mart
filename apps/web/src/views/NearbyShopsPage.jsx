@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { ArrowRight, Check, Filter, Layers, MapPin, RefreshCcw, Search, ShieldCheck, ShoppingBag, Sun, Truck, User, Wallet } from 'lucide-react';
@@ -8,22 +8,42 @@ import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { AFM_DATA } from '@/lib/seed-data';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
+import dynamic from 'next/dynamic';
+const NearbyMap = dynamic(() => import('@/components/NearbyMap'), { ssr: false });
 
-// AfmButton kept for prototype compatibility — maps to shadcn Button
 function AfmButton({ variant='primary', size, children, onClick, className='' }) {
-  const sv = variant === 'primary' ? 'default' : variant === 'ghost' ? 'outline' : variant === 'on-dark' ? 'secondary' : 'ghost';
-  return <Button variant={sv} size={size} onClick={onClick} className={className}>{children}</Button>;
+  const cls = variant === 'on-dark'  ? 'afm-btn afm-btn-on-dark'
+            : variant === 'ghost'    ? 'afm-btn afm-btn-ghost'
+            : variant === 'light'    ? 'afm-btn afm-btn-light'
+            : 'afm-btn afm-btn-primary';
+  return <button className={`${cls}${size === 'sm' ? ' afm-btn-sm' : ''}${className ? ' ' + className : ''}`} onClick={onClick}>{children}</button>;
 }
 
 
 
 
 function NearbyView({ onShopSelect }) {
-  const I = AfmIcons;
   const { boutiques, filters, radii } = AFM_DATA;
   const [sel, setSel] = useState(boutiques[0].id);
   const [activeFilters, setActiveFilters] = useState(new Set(['Verified only']));
   const [activeRadius, setActiveRadius] = useState('5 km');
+  const [userLat, setUserLat] = useState(19.0596);
+  const [userLng, setUserLng] = useState(72.8295);
+  const [nearbyToast, setNearbyToast] = useState(null);
+  const showNearbyToast = (msg) => { setNearbyToast(msg); setTimeout(() => setNearbyToast(null), 3000); };
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => { setUserLat(pos.coords.latitude); setUserLng(pos.coords.longitude); },
+        () => {}
+      );
+    }
+  }, []);
+
+  const mapShops = boutiques.map(b => ({ id: b.id, name: b.name, lat: b.lat, lng: b.lng, isVerified: b.verified }));
 
   const toggleFilter = (f) => {
     const s = new Set(activeFilters);
@@ -45,6 +65,11 @@ function NearbyView({ onShopSelect }) {
 
   return (
     <main>
+      {nearbyToast && (
+        <div style={{ position:'fixed', bottom:24, right:24, background:'var(--navy-800)', color:'#fff', padding:'12px 20px', borderRadius:12, font:'500 14px Poppins', zIndex:9999, boxShadow:'0 4px 16px rgba(0,0,0,0.25)' }}>
+          {nearbyToast}
+        </div>
+      )}
       {/* HERO */}
       <section className="nearby-hero">
         <div className="container nearby-hero-inner">
@@ -181,29 +206,12 @@ function NearbyView({ onShopSelect }) {
             </div>
 
             <div className="nearby-rich-map">
-              <div className="map-stage" style={{ width: '100%', height: '100%' }}>
-                <div className="grid"></div>
-                <div className="road" style={{ top: '22%', left: '8%', right: '5%', height: 5 }}></div>
-                <div className="road" style={{ top: '54%', left: '15%', right: '10%', height: 4 }}></div>
-                <div className="road" style={{ left: '40%', top: '5%', bottom: '12%', width: 4 }}></div>
-                <div className="road" style={{ left: '68%', top: '8%', bottom: '5%', width: 3 }}></div>
-                <div className="user-radius" style={{ left: 'calc(50% - 140px)', top: 'calc(50% - 140px)', width: 280, height: 280 }}></div>
-                <div className="user-pin" style={{ left: 'calc(50% - 9px)', top: 'calc(50% - 9px)' }}></div>
-                {boutiques.map(b => (
-                  <div key={b.id} className={`map-pin ${b.verified ? 'gold' : ''}`} style={{ left: `${b.x}%`, top: `${b.y}%` }}>
-                    <svg width="36" height="48" viewBox="0 0 36 48" fill="none">
-                      <path d="M18 1 C 9 1, 2 8, 2 18 C 2 30, 18 47, 18 47 C 18 47, 34 30, 34 18 C 34 8, 27 1, 18 1 Z" fill={b.verified ? '#1DA1F2' : '#001F3F'} stroke="rgba(255,255,255,0.16)"/>
-                      <circle cx="18" cy="18" r="11" fill="#fff"/>
-                      <text x="18" y="22.5" textAnchor="middle" fontFamily="Playfair Display, serif" fontSize="11" fontStyle="italic" fontWeight="700" fill="#FF1493">{b.initial.charAt(0)}</text>
-                    </svg>
-                  </div>
-                ))}
-                <div className="map-topbar">
-                  <Search size={16}/>
-                  <input className="search" placeholder="Search by area, boutique, category…"/>
-                  <span className="chip on"><Filter size={11} style={{ marginRight: 4 }}/>3</span>
-                </div>
-              </div>
+              <NearbyMap
+                shops={mapShops}
+                centerLat={userLat}
+                centerLng={userLng}
+                onShopClick={(id) => setSel(id)}
+              />
             </div>
           </div>
 
@@ -241,8 +249,8 @@ function NearbyView({ onShopSelect }) {
               <h3>Walk in with <em>Apna</em> in your pocket.</h3>
               <p>Get directions to verified shops, AR try-on in-store, and push offers when you're within 200 m of a boutique you wishlisted.</p>
               <div className="stores">
-                <a href="#"> Download on the App Store</a>
-                <a href="#">▶ Get it on Google Play</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); showNearbyToast('iOS app coming soon!'); }}> Download on the App Store</a>
+                <a href="#" onClick={(e) => { e.preventDefault(); showNearbyToast('Android app coming soon!'); }}>▶ Get it on Google Play</a>
               </div>
             </div>
             <div className="phones">
@@ -258,4 +266,14 @@ function NearbyView({ onShopSelect }) {
 
 
 
-export default NearbyView;
+export default function NearbyShopsPage() {
+  const router = useRouter();
+  const nav = (v) => { const m = { home:'/', cart:'/cart', wishlist:'/wishlist', account:'/account', categories:'/categories' }; router.push(m[v] ?? '/'); };
+  return (
+    <>
+      <Header setView={nav} />
+      <NearbyView onShopSelect={(id) => router.push('/shop/' + id)} />
+      <Footer />
+    </>
+  );
+}

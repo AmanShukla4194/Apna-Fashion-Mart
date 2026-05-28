@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(rm \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\apps\\\\web\\\\src\\\\app\\\\account\\\\page.tsx\")",
+      "Bash(rm \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\apps\\\\web\\\\src\\\\app\\\\legal\\\\[doc]\\\\page.tsx\")",
+      "Bash(npx tsc *)",
+      "Bash(Get-ChildItem -Recurse \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\apps\\\\web\\\\src\\\\app\\\\api\" -Filter \"*.ts\")",
+      "Read(//c/Users/amans/.claude/projects/c--Users-amans-Downloads-horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523--1-/memory/**)",
+      "Read(//d//**)",
+      "PowerShell(where.exe java 2>$null; [System.Environment]::GetEnvironmentVariable\\(\"JAVA_HOME\", \"Machine\"\\); [System.Environment]::GetEnvironmentVariable\\(\"JAVA_HOME\", \"User\"\\))",
+      "PowerShell(cmd /c \"dir D:\\\\ /b /a\")",
+      "PowerShell(cmd /c \"dir D:\\\\Andriod /b /a\" 2>&1)",
+      "PowerShell(cmd /c \"dir D:\\\\AndroidSDK /b /a\" 2>&1)",
+      "PowerShell(& \"D:\\\\Andriod\\\\jbr\\\\bin\\\\java.exe\" -version 2>&1)",
+      "PowerShell(cmd /c \"dir D:\\\\Flutter /b /a\" 2>&1)",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\app.tar.gz\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\supabase\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\supabase-setup.sql\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Force \"C:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\wrangler.toml\" -ErrorAction SilentlyContinue)",
+      "Bash(Remove-Item -Recurse -Force \"C:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\apps\\\\mobile\" -ErrorAction SilentlyContinue)",
+      "Bash(dir \"D:\\\\Andriod\\\\jbr\")",
+      "Bash(D:\\\\Flutter\\\\flutter\\\\bin\\\\flutter.bat pub *)",
+      "PowerShell(D:\\\\AndroidSDK\\\\platform-tools\\\\adb.exe -s emulator-5554 install -r \"c:\\\\Users\\\\amans\\\\Downloads\\\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)\\\\Mobile App Version\\\\build\\\\app\\\\outputs\\\\flutter-apk\\\\app-debug.apk\" 2>&1)",
+      "PowerShell(D:\\\\AndroidSDK\\\\platform-tools\\\\adb.exe -s emulator-5554 logcat -c 2>&1)",
+      "PowerShell(D:\\\\AndroidSDK\\\\platform-tools\\\\adb.exe -s emulator-5554 shell am start -n com.apnafashionmart.app.debug/com.apnafashionmart.app.MainActivity 2>&1)",
+      "PowerShell(D:\\\\AndroidSDK\\\\platform-tools\\\\adb.exe -s emulator-5554 logcat -d -s \"flutter,AndroidRuntime,FATAL,art\" 2>&1)",
+      "Bash(cd \"/c/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/Mobile App Version/\" && pwd && ls -la)",
+      "Read(//c/c/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/**)"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\amans\\Downloads\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 (1)\\apps\\web\\src\\app\\account",
+      "c:\\Users\\amans\\Downloads\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 (1)\\apps\\web\\src\\app\\legal\\[doc]"
+    ]
+  }
+}

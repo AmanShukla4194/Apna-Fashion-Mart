@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.14)
+project(apna_fashion_mart LANGUAGES CXX)
+set(BINARY_NAME "apna_fashion_mart")
+cmake_policy(SET CMP0063 NEW)
+set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/run" CACHE PATH "...")
+enable_testing()
+add_subdirectory("flutter")
+add_subdirectory("runner")

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Splash / launch background for Apna Fashion Mart.
+  Shows the AFM navy800 brand colour while Flutter initialises.
+-->
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Solid navy background -->
+    <item android:drawable="@color/navy800"/>
+</layer-list>

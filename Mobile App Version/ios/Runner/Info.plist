@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- ── Bundle identity ─────────────────────────────────────────────── -->
+  <key>CFBundleDevelopmentRegion</key>
+  <string>$(DEVELOPMENT_LANGUAGE)</string>
+
+  <key>CFBundleDisplayName</key>
+  <string>Apna Fashion Mart</string>
+
+  <key>CFBundleExecutable</key>
+  <string>$(EXECUTABLE_NAME)</string>
+
+  <key>CFBundleIdentifier</key>
+  <string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+
+  <key>CFBundleName</key>
+  <string>apna_fashion_mart</string>
+
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+
+  <key>CFBundleShortVersionString</key>
+  <string>$(FLUTTER_BUILD_NAME)</string>
+
+  <key>CFBundleSignature</key>
+  <string>????</string>
+
+  <key>CFBundleVersion</key>
+  <string>$(FLUTTER_BUILD_NUMBER)</string>
+
+  <!-- ── Platform requirements ───────────────────────────────────────── -->
+  <key>LSRequiresIPhoneOS</key>
+  <true/>
+
+  <key>MinimumOSVersion</key>
+  <string>13.0</string>
+
+  <!-- ── UI ─────────────────────────────────────────────────────────── -->
+  <key>UILaunchStoryboardName</key>
+  <string>LaunchScreen</string>
+
+  <key>UIMainStoryboardFile</key>
+  <string>Main</string>
+
+  <key>UISupportedInterfaceOrientations</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+  </array>
+
+  <key>UISupportedInterfaceOrientations~ipad</key>
+  <array>
+    <string>UIInterfaceOrientationPortrait</string>
+    <string>UIInterfaceOrientationPortraitUpsideDown</string>
+    <string>UIInterfaceOrientationLandscapeLeft</string>
+    <string>UIInterfaceOrientationLandscapeRight</string>
+  </array>
+
+  <key>UIViewControllerBasedStatusBarAppearance</key>
+  <false/>
+
+  <key>UIStatusBarStyle</key>
+  <string>UIStatusBarStyleLightContent</string>
+
+  <!-- ── Privacy usage descriptions ─────────────────────────────────── -->
+  <key>NSLocationWhenInUseUsageDescription</key>
+  <string>Apna Fashion Mart needs your location to show nearby boutiques.</string>
+
+  <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+  <string>Apna Fashion Mart uses your location to show boutiques near you.</string>
+
+  <key>NSCameraUsageDescription</key>
+  <string>Used for AR try-on and uploading product photos.</string>
+
+  <key>NSPhotoLibraryUsageDescription</key>
+  <string>Select photos for your profile or product reviews.</string>
+
+  <key>NSPhotoLibraryAddUsageDescription</key>
+  <string>Save product images to your photo library.</string>
+
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Used for the voice search feature.</string>
+
+  <!-- ── URL schemes (deep links) ────────────────────────────────────── -->
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>com.apnafashionmart.app</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>apnafashionmart</string>
+      </array>
+    </dict>
+  </array>
+
+  <!-- ── App Transport Security ──────────────────────────────────────── -->
+  <key>NSAppTransportSecurity</key>
+  <dict>
+    <key>NSAllowsArbitraryLoads</key>
+    <false/>
+    <key>NSExceptionDomains</key>
+    <dict>
+      <!-- OSM tiles are HTTPS — exception kept as reference -->
+      <key>tile.openstreetmap.org</key>
+      <dict>
+        <key>NSExceptionAllowsInsecureHTTPLoads</key>
+        <false/>
+      </dict>
+    </dict>
+  </dict>
+
+</dict>
+</plist>

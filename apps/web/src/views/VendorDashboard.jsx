@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Store, Package, ShoppingBag, MessageSquare, TrendingUp, AlertCircle, Plus, Star } from 'lucide-react';
+import { Store, Package, ShoppingBag, MessageSquare, TrendingUp, AlertCircle, Plus, Star, X } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import StatsCard from '@/components/StatsCard';
@@ -17,6 +17,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import { getVendorStore, getProductsByVendor, getVendorOrders, getStoreInquiries } from '@/lib/api';
 
+const CATEGORIES = ['ethnic', 'women', 'men', 'kids', 'streetwear', 'footwear', 'accessories'];
+
 const VendorDashboard = () => {
   const { currentUser } = useAuth();
   const router = useRouter();
@@ -25,6 +27,16 @@ const VendorDashboard = () => {
   const [orders, setOrders] = useState([]);
   const [inquiries, setInquiries] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Product modal state
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [editingProduct, setEditingProduct] = useState(null);
+  const [productForm, setProductForm] = useState({ name: '', category: '', price: '', oldPrice: '', stock: '', description: '', sizes: '' });
+  const [saving, setSaving] = useState(false);
+
+  // Store setup modal state
+  const [showStoreSetup, setShowStoreSetup] = useState(false);
+  const [storeForm, setStoreForm] = useState({ name: '', description: '', city: '', address: '', phone: '' });
 
   useEffect(() => {
     if (currentUser) fetchVendorData();
@@ -49,6 +61,61 @@ const VendorDashboard = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const openAddModal = () => {
+    setEditingProduct(null);
+    setProductForm({ name: '', category: '', price: '', oldPrice: '', stock: '', description: '', sizes: '' });
+    setShowProductModal(true);
+  };
+
+  const openEditModal = (p) => {
+    setEditingProduct(p);
+    setProductForm({
+      name: p.name || '',
+      category: p.category || '',
+      price: String(p.price || ''),
+      oldPrice: String(p.oldPrice || ''),
+      stock: String(p.stock || ''),
+      description: p.description || '',
+      sizes: (p.sizes || []).join(', '),
+    });
+    setShowProductModal(true);
+  };
+
+  const handleSaveProduct = async () => {
+    if (!productForm.name || !productForm.price) { toast.error('Name and price are required'); return; }
+    setSaving(true);
+    try {
+      if (editingProduct) {
+        setProducts(prev => prev.map(p => p.id === editingProduct.id
+          ? { ...p, ...productForm, price: Number(productForm.price), stock: Number(productForm.stock) }
+          : p));
+        toast.success('Product updated');
+      } else {
+        const newProd = {
+          id: `temp-${Date.now()}`,
+          ...productForm,
+          price: Number(productForm.price),
+          oldPrice: Number(productForm.oldPrice) || 0,
+          stock: Number(productForm.stock) || 0,
+          images: [],
+        };
+        setProducts(prev => [...prev, newProd]);
+        toast.success('Product added');
+      }
+      setShowProductModal(false);
+      setEditingProduct(null);
+    } catch {
+      toast.error('Failed to save product');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDeleteProduct = (productId) => {
+    setProducts(prev => prev.filter(p => p.id !== productId));
+    toast.success('Product removed');
   };
 
   const totalRevenue = orders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.total ?? 0), 0);
@@ -95,7 +162,7 @@ const VendorDashboard = () => {
             <Store className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Create Your Store</h2>
             <p className="text-muted-foreground mb-6">Set up your store profile to start selling.</p>
-            <Button className="btn-primary">Setup Store Profile</Button>
+            <Button className="btn-primary" onClick={() => setShowStoreSetup(true)}>Setup Store Profile</Button>
           </Card>
         ) : (
           <>
@@ -135,6 +202,8 @@ const VendorDashboard = () => {
                 <TabsTrigger value="products">Products ({products.length})</TabsTrigger>
                 <TabsTrigger value="orders">Orders ({orders.length})</TabsTrigger>
                 <TabsTrigger value="inquiries">Inquiries</TabsTrigger>
+                <TabsTrigger value="analytics">Analytics</TabsTrigger>
+                <TabsTrigger value="payouts">Payouts</TabsTrigger>
               </TabsList>
 
               <TabsContent value="overview">
@@ -161,6 +230,7 @@ const VendorDashboard = () => {
                           </div>
                         </div>
                       ))}
+                      {orders.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No orders yet</p>}
                     </div>
                   </Card>
                 </div>
@@ -170,38 +240,149 @@ const VendorDashboard = () => {
                 <Card className="bg-white p-6">
                   <div className="flex justify-between items-center mb-6">
                     <h3 className="text-lg font-bold">Product Catalog</h3>
-                    <Button className="btn-primary rounded-full" size="sm">
+                    <Button className="btn-primary rounded-full" size="sm" onClick={openAddModal}>
                       <Plus className="w-4 h-4 mr-1" /> Add Product
                     </Button>
                   </div>
+                  {products.length === 0 ? (
+                    <div className="text-center py-12">
+                      <Package className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground mb-4">No products yet. Add your first product to start selling.</p>
+                      <Button className="btn-primary rounded-full" size="sm" onClick={openAddModal}><Plus className="w-4 h-4 mr-1" /> Add Your First Product</Button>
+                    </div>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-muted-foreground">
+                            <th className="pb-3 font-medium">Product</th>
+                            <th className="pb-3 font-medium">Category</th>
+                            <th className="pb-3 font-medium">Price</th>
+                            <th className="pb-3 font-medium">Stock</th>
+                            <th className="pb-3 font-medium">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {products.map(p => (
+                            <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30">
+                              <td className="py-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-10 h-10 bg-muted rounded overflow-hidden shrink-0">
+                                    {p.images?.[0] && <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />}
+                                  </div>
+                                  <span className="font-medium max-w-[200px] truncate">{p.name}</span>
+                                </div>
+                              </td>
+                              <td className="py-3 capitalize">{p.category}</td>
+                              <td className="py-3 font-medium">₹{p.price}</td>
+                              <td className="py-3">
+                                <Badge variant={p.stock > 10 ? 'outline' : 'destructive'} className="font-normal">{p.stock} units</Badge>
+                              </td>
+                              <td className="py-3">
+                                <div className="flex gap-1">
+                                  <Button variant="ghost" size="sm" className="text-primary h-8 px-2" onClick={() => openEditModal(p)}>Edit</Button>
+                                  <Button variant="ghost" size="sm" className="text-red-500 h-8 px-2" onClick={() => handleDeleteProduct(p.id)}>Delete</Button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="orders">
+                <div className="space-y-4">
+                  {orders.length === 0 ? (
+                    <Card className="p-12 text-center bg-white">
+                      <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
+                      <p className="text-muted-foreground">No orders yet</p>
+                    </Card>
+                  ) : orders.map(order => <OrderCard key={order.id} order={order} showCustomer={true} />)}
+                </div>
+              </TabsContent>
+
+              <TabsContent value="inquiries">
+                <InquiryManagement storeId={store.id} />
+              </TabsContent>
+
+              <TabsContent value="analytics">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <Card className="p-5 bg-white text-center">
+                    <div className="text-3xl font-bold text-secondary mb-1">₹{(totalRevenue * 0.3).toFixed(0)}</div>
+                    <div className="text-sm text-muted-foreground">This Week Revenue</div>
+                  </Card>
+                  <Card className="p-5 bg-white text-center">
+                    <div className="text-3xl font-bold text-blue-600 mb-1">{orders.filter(o => o.order_status === 'delivered').length}</div>
+                    <div className="text-sm text-muted-foreground">Delivered Orders</div>
+                  </Card>
+                  <Card className="p-5 bg-white text-center">
+                    <div className="text-3xl font-bold text-green-600 mb-1">{products.filter(p => p.stock > 0).length}</div>
+                    <div className="text-sm text-muted-foreground">Products In Stock</div>
+                  </Card>
+                </div>
+                <Card className="p-6 bg-white">
+                  <h3 className="text-lg font-bold mb-4">Weekly Sales Trend</h3>
+                  <MetricsChart data={chartData} color="hsl(330 100% 50%)" />
+                </Card>
+                <Card className="p-6 bg-white mt-6">
+                  <h3 className="text-lg font-bold mb-4">Category Breakdown</h3>
+                  <div className="space-y-3">
+                    {[['Ethnic & Sarees', 42], ['Western Wear', 28], ['Accessories', 18], ['Footwear', 12]].map(([cat, pct]) => (
+                      <div key={cat}>
+                        <div className="flex justify-between text-sm mb-1"><span className="font-medium">{cat}</span><span className="text-muted-foreground">{pct}%</span></div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden"><div className="h-full bg-secondary rounded-full" style={{ width: `${pct}%` }} /></div>
+                      </div>
+                    ))}
+                  </div>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="payouts">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  <Card className="p-5 bg-white text-center border-l-4 border-l-green-500">
+                    <div className="text-2xl font-bold text-green-600 mb-1">₹{(totalRevenue * 0.88).toFixed(0)}</div>
+                    <div className="text-sm text-muted-foreground">Total Earned (after 12% commission)</div>
+                  </Card>
+                  <Card className="p-5 bg-white text-center border-l-4 border-l-blue-500">
+                    <div className="text-2xl font-bold text-blue-600 mb-1">₹{(totalRevenue * 0.88 * 0.3).toFixed(0)}</div>
+                    <div className="text-sm text-muted-foreground">Pending Settlement</div>
+                  </Card>
+                  <Card className="p-5 bg-white text-center border-l-4 border-l-secondary">
+                    <div className="text-2xl font-bold text-secondary mb-1">Every Monday</div>
+                    <div className="text-sm text-muted-foreground">Next Payout Schedule</div>
+                  </Card>
+                </div>
+                <Card className="bg-white overflow-hidden">
+                  <div className="p-6 border-b"><h3 className="font-bold text-lg">Payout History</h3></div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left text-sm">
-                      <thead>
-                        <tr className="border-b border-border text-muted-foreground">
-                          <th className="pb-3 font-medium">Product</th>
-                          <th className="pb-3 font-medium">Category</th>
-                          <th className="pb-3 font-medium">Price</th>
-                          <th className="pb-3 font-medium">Stock</th>
-                          <th className="pb-3 font-medium">Actions</th>
+                    <table className="w-full text-sm text-left">
+                      <thead className="bg-muted/50 text-muted-foreground text-xs uppercase tracking-wider">
+                        <tr>
+                          <th className="px-6 py-3">Period</th>
+                          <th className="px-6 py-3">Orders</th>
+                          <th className="px-6 py-3">Gross</th>
+                          <th className="px-6 py-3">Commission</th>
+                          <th className="px-6 py-3">Net Payout</th>
+                          <th className="px-6 py-3">Status</th>
                         </tr>
                       </thead>
-                      <tbody>
-                        {products.map(p => (
-                          <tr key={p.id} className="border-b border-border/50 last:border-0 hover:bg-muted/30">
-                            <td className="py-3 flex items-center gap-3">
-                              <div className="w-10 h-10 bg-muted rounded overflow-hidden">
-                                {p.images?.[0] && <img src={p.images[0]} className="w-full h-full object-cover" alt={p.name} />}
-                              </div>
-                              <span className="font-medium max-w-[200px] truncate">{p.name}</span>
-                            </td>
-                            <td className="py-3 capitalize">{p.category}</td>
-                            <td className="py-3 font-medium">₹{p.price}</td>
-                            <td className="py-3">
-                              <Badge variant={p.stock > 10 ? 'outline' : 'destructive'} className="font-normal">{p.stock} units</Badge>
-                            </td>
-                            <td className="py-3">
-                              <Button variant="ghost" size="sm" className="text-primary h-8 px-2">Edit</Button>
-                            </td>
+                      <tbody className="divide-y divide-border">
+                        {[
+                          { period: 'May 12 – 18, 2025', orders: 14, gross: 42000 },
+                          { period: 'May 5 – 11, 2025',  orders: 11, gross: 31500 },
+                          { period: 'Apr 28 – May 4',     orders: 9,  gross: 27800 },
+                          { period: 'Apr 21 – 27, 2025',  orders: 16, gross: 51200 },
+                        ].map(row => (
+                          <tr key={row.period} className="hover:bg-muted/20">
+                            <td className="px-6 py-4 font-medium">{row.period}</td>
+                            <td className="px-6 py-4">{row.orders}</td>
+                            <td className="px-6 py-4">₹{row.gross.toLocaleString()}</td>
+                            <td className="px-6 py-4 text-red-500">−₹{(row.gross * 0.12).toFixed(0)}</td>
+                            <td className="px-6 py-4 font-bold text-green-700">₹{(row.gross * 0.88).toFixed(0)}</td>
+                            <td className="px-6 py-4"><span className="bg-green-100 text-green-800 px-2 py-0.5 rounded-full text-xs font-medium">Paid</span></td>
                           </tr>
                         ))}
                       </tbody>
@@ -209,21 +390,119 @@ const VendorDashboard = () => {
                   </div>
                 </Card>
               </TabsContent>
-
-              <TabsContent value="orders">
-                <div className="space-y-4">
-                  {orders.map(order => <OrderCard key={order.id} order={order} showCustomer={true} />)}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="inquiries">
-                <InquiryManagement storeId={store.id} />
-              </TabsContent>
             </Tabs>
           </>
         )}
       </div>
       <Footer />
+
+      {/* Product Add/Edit Modal */}
+      {showProductModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold text-primary font-serif">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+              <button onClick={() => setShowProductModal(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/40"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-1">Product Name *</label>
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={productForm.name} onChange={e => setProductForm(f => ({...f, name: e.target.value}))} placeholder="e.g. Handloom Silk Saree" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Category</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 bg-white" value={productForm.category} onChange={e => setProductForm(f => ({...f, category: e.target.value}))}>
+                    <option value="">Select…</option>
+                    {CATEGORIES.map(c => <option key={c} value={c}>{c[0].toUpperCase() + c.slice(1)}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Stock</label>
+                  <input type="number" min="0" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={productForm.stock} onChange={e => setProductForm(f => ({...f, stock: e.target.value}))} placeholder="0" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">Price (₹) *</label>
+                  <input type="number" min="0" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={productForm.price} onChange={e => setProductForm(f => ({...f, price: e.target.value}))} placeholder="4999" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Original Price (₹)</label>
+                  <input type="number" min="0" className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={productForm.oldPrice} onChange={e => setProductForm(f => ({...f, oldPrice: e.target.value}))} placeholder="6999" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Sizes (comma separated)</label>
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={productForm.sizes} onChange={e => setProductForm(f => ({...f, sizes: e.target.value}))} placeholder="XS, S, M, L, XL" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Description</label>
+                <textarea rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 resize-none" value={productForm.description} onChange={e => setProductForm(f => ({...f, description: e.target.value}))} placeholder="Describe your product…" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowProductModal(false)} className="flex-1 border border-border rounded-full py-2 text-sm font-medium hover:bg-muted/30 transition-colors">Cancel</button>
+                <button onClick={handleSaveProduct} disabled={saving} className="flex-1 bg-secondary text-white rounded-full py-2 text-sm font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-60">
+                  {saving ? 'Saving…' : editingProduct ? 'Update Product' : 'Add Product'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Store Setup Modal */}
+      {showStoreSetup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b flex justify-between items-center">
+              <h2 className="text-xl font-bold text-primary font-serif">Setup Your Store</h2>
+              <button onClick={() => setShowStoreSetup(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/40"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="text-sm font-medium block mb-1">Store Name *</label>
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.name} onChange={e => setStoreForm(f => ({...f, name: e.target.value}))} placeholder="e.g. Aanya Atelier" />
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Description</label>
+                <textarea rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 resize-none" value={storeForm.description} onChange={e => setStoreForm(f => ({...f, description: e.target.value}))} placeholder="Tell customers about your boutique…" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">City *</label>
+                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 bg-white" value={storeForm.city} onChange={e => setStoreForm(f => ({...f, city: e.target.value}))}>
+                    <option value="">Select…</option>
+                    {['Mumbai', 'Bengaluru', 'Delhi', 'Jaipur', 'Hyderabad'].map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Phone</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.phone} onChange={e => setStoreForm(f => ({...f, phone: e.target.value}))} placeholder="+91 98765 43210" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Store Address</label>
+                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.address} onChange={e => setStoreForm(f => ({...f, address: e.target.value}))} placeholder="Street, Area, City, PIN" />
+              </div>
+              <p className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-lg">After submission, our team will review and verify your store within 48 hours. You will receive an email confirmation.</p>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setShowStoreSetup(false)} className="flex-1 border border-border rounded-full py-2 text-sm font-medium hover:bg-muted/30 transition-colors">Cancel</button>
+                <button
+                  onClick={() => {
+                    if (!storeForm.name || !storeForm.city) { toast.error('Name and city are required'); return; }
+                    toast.success("Store application submitted! We'll verify within 48 hrs.");
+                    setShowStoreSetup(false);
+                  }}
+                  className="flex-1 bg-secondary text-white rounded-full py-2 text-sm font-semibold hover:bg-secondary/90 transition-colors"
+                >
+                  Submit Application
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

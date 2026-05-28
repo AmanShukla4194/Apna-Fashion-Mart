@@ -1,4 +1,4 @@
-﻿import AdminDashboard from '@/views/AdminDashboard';
+﻿import { notFound } from 'next/navigation';
 export default function Page() {
-  return <AdminDashboard />;
+  return notFound();
 }
