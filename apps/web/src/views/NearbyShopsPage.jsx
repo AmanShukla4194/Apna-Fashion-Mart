@@ -467,7 +467,7 @@ function NearbyView() {
             </div>
 
             {/* MAP */}
-            <div className="nearby-rich-map">
+            <div className="nearby-rich-map" style={{ isolation: 'isolate' }}>
               <NearbyMap
                 shops={mapShops}
                 centerLat={userLat ?? 19.0596}

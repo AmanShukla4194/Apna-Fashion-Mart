@@ -92,7 +92,7 @@ function UnclaimedShopView({ name, address, shopLat, shopLng, hours, phone, type
 
         {/* content */}
         <div className="container" style={{ marginTop:-24 }}>
-          <div style={{ display:'grid', gridTemplateColumns:'1fr 340px', gap:24, alignItems:'start' }}>
+          <div className="shop-detail-grid">
 
             {/* left column */}
             <div>
@@ -146,8 +146,8 @@ function UnclaimedShopView({ name, address, shopLat, shopLng, hours, phone, type
 
             {/* right column */}
             <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-              {/* map */}
-              <div style={{ background:'#fff', borderRadius:20, overflow:'hidden', border:'1px solid var(--border)', boxShadow:'0 4px 24px rgba(0,0,0,0.06)' }}>
+              {/* map — isolation:isolate traps Leaflet z-indexes inside this box */}
+              <div style={{ background:'#fff', borderRadius:20, overflow:'hidden', border:'1px solid var(--border)', boxShadow:'0 4px 24px rgba(0,0,0,0.06)', isolation:'isolate' }}>
                 <div style={{ height:260 }}>
                   {shopLat && shopLng
                     ? <MiniMap shopLat={shopLat} shopLng={shopLng} shopName={name} userLat={userLat} userLng={userLng}/>

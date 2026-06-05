@@ -13,7 +13,7 @@ img, video, iframe, embed { max-width: 100%; }
 
 /* ---------- HEADER ---------- */
 .afm-header {
-  position: sticky; top: 0; z-index: 100;
+  position: sticky; top: 0; z-index: 200;
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--afm-border);
@@ -732,8 +732,12 @@ img, video, iframe, embed { max-width: 100%; }
 }
 .ai-chat-bubble:hover { transform: translateY(-3px); box-shadow: 0 14px 40px -8px rgba(255,20,147,0.6), 0 6px 20px -4px rgba(11,15,24,0.3); }
 .ai-chat-bubble-label { display: inline; }
+@media (max-width: 640px) {
+  /* Raise FAB above the sticky app download banner (~72px tall) */
+  .ai-chat-bubble { bottom: 88px; right: 16px; }
+}
 @media (max-width: 480px) {
-  .ai-chat-bubble { bottom: 16px; right: 16px; padding: 0; width: 52px; justify-content: center; }
+  .ai-chat-bubble { bottom: 88px; right: 16px; padding: 0; width: 52px; justify-content: center; }
   .ai-chat-bubble-label { display: none; }
 }
 
@@ -906,8 +910,9 @@ img, video, iframe, embed { max-width: 100%; }
 
 /* ---------- STICKY APP CTA BAR ---------- */
 .sticky-app-cta {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(120%);
+  position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%) translateY(120%);
   z-index: 90;
+  max-width: calc(100vw - 32px);
   display: flex; align-items: center; gap: 14px;
   background: rgba(255, 255, 255, 0.92); backdrop-filter: blur(20px) saturate(180%);
   border: 1px solid var(--afm-border);
@@ -2190,9 +2195,15 @@ img, video, iframe, embed { max-width: 100%; }
   .product-card .quick-add { display: none; } /* avoid hover-only on touch */
   .product-card .view3d-pill { opacity: 1; transform: translateY(0); }
 
-  .nearby-hero { padding: 48px 0 32px; }
-  .nearby-hero-stats { grid-template-columns: 1fr; }
-  .nearby-row-rich { grid-template-columns: 88px 1fr; }
+  .nearby-hero { padding: 32px 0 20px; }
+  /* Keep all 3 stats side by side on mobile — compact */
+  .nearby-hero-stats { grid-template-columns: repeat(3, 1fr) !important; gap: 8px; }
+  .nearby-hero-stat { padding: 12px 8px !important; }
+  .nearby-hero-stat .n { font-size: 18px !important; }
+  .nearby-hero-stat .l { font-size: 10px !important; }
+  /* Shop card — image + info stacked */
+  .nearby-row-rich { grid-template-columns: 80px 1fr; gap: 10px; }
+  .nearby-row-rich .thumb { width: 80px !important; height: 90px !important; }
   .nearby-row-rich .actions { grid-column: 1 / -1; flex-direction: row; align-items: center; justify-content: space-between; }
   .nearby-rich-map { height: 320px; }
   .nearby-app-cta { padding: 24px; }
@@ -2274,19 +2285,27 @@ img, video, iframe, embed { max-width: 100%; }
   margin-left: auto;
 }
 .afm-mobile-menu {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 200;
-  background: rgba(11,15,24,0.55); backdrop-filter: blur(4px);
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  /* Must be above AI chat (300), Leaflet (400-1000), and all page elements */
+  z-index: 1100;
+  background: rgba(11,15,24,0.6);
   opacity: 0; pointer-events: none;
   transition: opacity 300ms;
 }
 .afm-mobile-menu.open { opacity: 1; pointer-events: auto; }
 .afm-mobile-menu .panel {
-  position: absolute; top: 0; right: 0; bottom: 0; width: 320px; max-width: 90vw;
+  position: absolute; top: 0; right: 0; bottom: 0;
+  width: 300px; max-width: 85vw;
   background: #fff;
-  padding: 20px 22px;
+  padding: 20px 20px;
+  /* Safe area for phones with home indicator (iPhone/Android) */
+  padding-bottom: max(20px, env(safe-area-inset-bottom, 20px));
   transform: translateX(100%); transition: transform 350ms var(--ease-out-expo);
-  display: flex; flex-direction: column; gap: 6px;
+  display: flex; flex-direction: column; gap: 4px;
   overflow-y: auto;
+  /* Prevent any page content bleeding through */
+  isolation: isolate;
+  box-shadow: -8px 0 40px rgba(0,0,0,0.25);
 }
 .afm-mobile-menu.open .panel { transform: translateX(0); }
 .afm-mobile-menu .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 14px; border-bottom: 1px solid var(--afm-border); }
@@ -2306,8 +2325,19 @@ img, video, iframe, embed { max-width: 100%; }
 /* ============================================================
    SHOP DETAIL PAGE — responsive layout
    ============================================================ */
-.shop-detail-grid { display: grid; grid-template-columns: 1fr 340px; gap: 24px; align-items: start; }
-@media (max-width: 900px) { .shop-detail-grid { grid-template-columns: 1fr; } }
+.shop-detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 24px;
+  align-items: start;
+}
+@media (max-width: 900px) {
+  .shop-detail-grid {
+    grid-template-columns: 1fr;
+  }
+  /* On mobile, show map/info (right col) ABOVE the CTA/products (left col) */
+  .shop-detail-grid > div:nth-child(2) { order: -1; }
+}
 
 /* ============================================================
    NEARBY FILTER BAR — mobile fixes
