@@ -121,7 +121,7 @@ export default function AIChatBot() {
         let errMsg = 'Sorry, I had trouble responding. Please try again.';
         try {
           const data = await res.json();
-          if (res.status === 503) errMsg = '⚙️ Apna AI is not yet configured. The admin needs to add the ANTHROPIC_API_KEY.';
+          if (res.status === 503) errMsg = '⚙️ Apna AI is not yet configured. The admin needs to add the GROQ_API_KEY in Amplify environment variables.';
           else if (res.status === 401) errMsg = '🔑 API key issue. Please contact support.';
           else if (data?.error) errMsg = data.error;
         } catch { /* ignore parse error */ }
