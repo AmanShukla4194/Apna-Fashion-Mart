@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -11,9 +11,37 @@ import { useCart } from '@/contexts/CartContext';
 export default function Header({ view, setView }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [locationLabel, setLocationLabel] = useState('Detecting location…');
   const { cartCount, openCart } = useCart();
   const router = useRouter();
   const go = (v) => { setView?.(v); setMenuOpen(false); };
+
+  useEffect(() => {
+    if (!navigator?.geolocation) {
+      setLocationLabel('Set your location');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?lat=${coords.latitude}&lon=${coords.longitude}&format=json`,
+            { headers: { 'Accept-Language': 'en', 'User-Agent': 'ApnaFashionMart/1.0' } }
+          );
+          const { address = {} } = await res.json();
+          const area = address.suburb || address.neighbourhood || address.village || address.town || '';
+          const city = address.city || address.town || address.county || '';
+          const pincode = address.postcode || '';
+          const parts = [area, city].filter(Boolean).join(', ');
+          setLocationLabel((parts + (pincode ? ' ' + pincode : '')).trim() || 'Location detected');
+        } catch {
+          setLocationLabel('Set your location');
+        }
+      },
+      () => setLocationLabel('Set your location'),
+      { timeout: 8000 }
+    );
+  }, []);
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
       router.push('/categories?q=' + encodeURIComponent(searchQuery.trim()));
@@ -27,14 +55,14 @@ export default function Header({ view, setView }) {
         <div className="inner">
           <span className="item deliver">
             <span className="ic"><MapPin size={11}/></span>
-            Deliver to <strong>Bandra West, Mumbai 400050</strong>
+            Deliver to <strong>{locationLabel}</strong>
           </span>
-          <span className="item">English ▾</span>
+          <span className="item">English</span>
           <div className="right">
             <Link href="/account" onClick={() => setView?.('account')}>Track order</Link>
             <Link href="/legal/privacy">Help center</Link>
             <Link href="/account" onClick={() => setView?.('account')}>My orders</Link>
-            <Link href="/legal/vendor">Become a partner</Link>
+            <Link href="/become-a-seller">Become a partner</Link>
           </div>
         </div>
       </div>

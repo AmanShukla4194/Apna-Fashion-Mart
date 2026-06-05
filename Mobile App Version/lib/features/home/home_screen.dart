@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:dio/dio.dart';
 import 'package:apna_fashion_mart/core/providers/cart_provider.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
@@ -17,6 +19,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Timer? _bannerTimer;
   Timer? _flashSaleTimer;
   Duration _flashSaleRemaining = const Duration(hours: 3, minutes: 47, seconds: 22);
+  String _locationLabel = 'Detecting location…';
 
   static const Color _navy800 = Color(0xFF001F3F);
   static const Color _magenta600 = Color(0xFFFF1493);
@@ -84,6 +87,44 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     super.initState();
     _startBannerAutoPlay();
     _startFlashSaleTimer();
+    _fetchLocation();
+  }
+
+  Future<void> _fetchLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.deniedForever ||
+          permission == LocationPermission.denied) {
+        if (mounted) setState(() => _locationLabel = 'Set your location');
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.low,
+      );
+      final res = await Dio().get(
+        'https://nominatim.openstreetmap.org/reverse',
+        queryParameters: {
+          'lat': pos.latitude,
+          'lon': pos.longitude,
+          'format': 'json',
+        },
+        options: Options(headers: {'Accept-Language': 'en'}),
+      );
+      final address = (res.data['address'] as Map<String, dynamic>?) ?? {};
+      final area = (address['suburb'] ?? address['neighbourhood'] ??
+          address['village'] ?? address['town'] ?? '') as String;
+      final city = (address['city'] ?? address['town'] ??
+          address['county'] ?? '') as String;
+      final pincode = (address['postcode'] ?? '') as String;
+      final parts = [area, city].where((s) => s.isNotEmpty).join(', ');
+      final label = (parts + (pincode.isNotEmpty ? ' $pincode' : '')).trim();
+      if (mounted) setState(() => _locationLabel = label.isNotEmpty ? label : 'Location detected');
+    } catch (_) {
+      if (mounted) setState(() => _locationLabel = 'Set your location');
+    }
   }
 
   void _startBannerAutoPlay() {

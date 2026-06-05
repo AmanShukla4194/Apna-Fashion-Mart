@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:apna_fashion_mart/core/theme/app_colors.dart';
 import 'package:apna_fashion_mart/core/providers/auth_provider.dart';
+import 'package:apna_fashion_mart/core/constants/app_constants.dart';
 import 'package:apna_fashion_mart/features/account/widgets/address_list_screen.dart';
 
 const String _appVersion = '1.0.0';
@@ -249,6 +250,11 @@ class _AuthenticatedView extends StatelessWidget {
             child: _AccountSection(
               title: 'Help',
               items: [
+                _AccountItem(
+                  icon: Icons.store_outlined,
+                  label: 'Become a Seller',
+                  onTap: () => _launchUrl(AppConstants.becomeASellerUrl),
+                ),
                 _AccountItem(
                   icon: Icons.help_outline,
                   label: 'Help Center',

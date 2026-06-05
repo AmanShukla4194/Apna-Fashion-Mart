@@ -26,7 +26,9 @@
       "PowerShell(D:\\\\AndroidSDK\\\\platform-tools\\\\adb.exe -s emulator-5554 logcat -d -s \"flutter,AndroidRuntime,FATAL,art\" 2>&1)",
       "Bash(cd \"/c/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/Mobile App Version/\" && pwd && ls -la)",
       "Read(//c/c/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/**)",
-      "Bash(npm install *)"
+      "Bash(npm install *)",
+      "Bash(node -e \"const p = require\\('./package.json'\\); console.log\\(p.dependencies['leaflet'], p.dependencies['react-leaflet']\\)\")",
+      "Bash(findstr /N \"width: [345][0-9][0-9]px\\\\|width: [0-9][0-9][0-9][0-9]px\\\\|min-width: [345][0-9][0-9]px\\\\|overflow.*hidden\\\\|overflow-x\" _styles.css)"
     ],
     "additionalDirectories": [
       "c:\\Users\\amans\\Downloads\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 (1)\\apps\\web\\src\\app\\account",

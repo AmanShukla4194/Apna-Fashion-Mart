@@ -794,7 +794,7 @@ Same as above but:
 | 4 | S3 + CloudFront | ✅ Done |
 | 5 | Lambda | ✅ Done |
 | 6 | API Gateway | ✅ Done |
-| 7 | Amplify | Pending |
+| 7 | Amplify + Custom Domain | ✅ Done |
 
 ---
 
@@ -952,8 +952,345 @@ curl https://709m6g0t8a.execute-api.ap-south-1.amazonaws.com/profile
 
 ---
 
-## What comes next (Phase 7)
+---
 
-| Phase | Service | What it does |
+## PHASE 7A — Cognito Post-Confirmation Lambda Trigger (afm-auth-trigger)
+
+### What this phase does
+
+When a new user signs up and confirms their email in Cognito, Cognito automatically calls a Lambda function. That function inserts the new user into your Aurora database. Without this, users exist in Cognito but not in your database — so no profile, orders, or cart can be stored for them.
+
+### How to create the auth trigger Lambda — step by step
+
+**Step 1** — AWS Console → **Lambda** → **Create function**
+- Function name: `afm-auth-trigger`
+- Runtime: **Node.js 20.x**
+- Architecture: x86_64
+- Click **Create function**
+
+**Step 2** — Set the handler (Runtime settings)
+- Lambda → afm-auth-trigger → **Configuration** → **General configuration** → Edit
+- Handler: `src/auth-trigger.handler`
+- Note: The handler field is NOT on the General configuration page — it is under **Runtime settings** (scroll down on the Code tab, or go to Configuration → Runtime settings → Edit)
+- Save
+
+**Step 3** — Add environment variables (Configuration → Environment variables)
+These are the same DB vars as the main afm-api function:
+```
+DB_HOST=database-1.cluster-c7cs8eykme39.ap-south-1.rds.amazonaws.com
+DB_NAME=postgres
+DB_USER=postgres
+```
+No `DB_PASSWORD` — Lambda uses IAM authentication.
+
+**Step 4** — Upload the same function.zip
+Lambda → Code → Upload from → .zip file → upload the same `function.zip` you created for `afm-api`. Both functions live in the same zip; the handler field controls which file/export runs.
+
+**Step 5** — Attach IAM permissions to the trigger's role
+Lambda → Configuration → Permissions → click the Execution role name → Add permissions → Attach policies:
+- `AmazonRDSDataFullAccess`
+
+**Step 6** — Wire the trigger to Cognito
+1. AWS Console → **Cognito** → **User Pools** → your pool
+2. **User pool properties** tab (in the newer Cognito UI, there is no "Triggers" tab — look for the Properties tab or scroll down to find Lambda triggers section)
+3. Click **Add Lambda trigger**
+4. Trigger type: **Authentication** → **Post confirmation trigger**
+   - Or: Trigger type: **Sign-up** → **Post confirmation trigger** (the exact wording depends on Cognito UI version — look for "Post confirmation")
+5. Lambda function: select **afm-auth-trigger**
+6. Click **Add Lambda trigger**
+
+### What the code does
+
+`backend/src/auth-trigger.js`:
+```javascript
+exports.handler = async (event) => {
+  const { sub, email, name } = event.request.userAttributes;
+  // Connects to Aurora using IAM auth token
+  // Runs: INSERT INTO users (cognito_sub, email, full_name, role) VALUES (...)
+  // ON CONFLICT (cognito_sub) DO NOTHING  ← safe to call twice
+  return event; // must return event back to Cognito
+};
+```
+
+The function must always return the `event` object back to Cognito or the sign-up flow will fail.
+
+---
+
+## PHASE 7B — AWS Amplify (Next.js Hosting + CI/CD)
+
+### What problem Amplify solves
+
+You need somewhere to host your Next.js website. Amplify is AWS's managed hosting service for frontend apps. It:
+- Connects to your GitHub repository
+- Automatically rebuilds and deploys when you push to the main branch
+- Handles HTTPS, global CDN, and custom domains
+- Works natively with Next.js (server-side rendering, API routes, etc.)
+
+### What is a monorepo?
+
+A **monorepo** is a single Git repository that contains multiple projects in subdirectories. Our repo is structured like this:
+
+```
+root/
+  apps/
+    web/          ← the Next.js website
+  Mobile App Version/   ← the Flutter app
+  backend/        ← Lambda code
+```
+
+Everything lives together in one repo. This is convenient (one `git push` can touch all projects) but requires telling Amplify: "the website is not at the root, it is inside `apps/web/`."
+
+### The amplify.yml build spec
+
+Amplify uses a file called `amplify.yml` to know how to build your app. The key rule: for a monorepo, this file must be at the **repository root** (not inside `apps/web/`) and must use the `applications` key with `appRoot`.
+
+**Correct format** (file at repo root: `amplify.yml`):
+```yaml
+version: 1
+applications:
+  - appRoot: apps/web
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+        build:
+          commands:
+            - npm run build
+      artifacts:
+        baseDirectory: .next
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+          - .next/cache/**/*
+```
+
+**Wrong format** (what happens if you put `amplify.yml` inside `apps/web/` without the `applications` key):
+```yaml
+version: 1
+frontend:
+  phases:
+    ...
+```
+Amplify build log error: `"Monorepo spec provided without 'applications' key"`
+
+### Common build failure: npm ci fails with missing packages
+
+`npm ci` requires the `package-lock.json` to be in sync with `package.json`. If you install new packages locally (`npm install`) but don't commit the updated `package-lock.json`, the CI build fails with errors like:
+
+```
+npm error Could not resolve dependency:
+npm error peer @smithy/types@"^4.0.0" from @aws-sdk/...
+```
+
+**Fix**: After any `npm install`, commit the updated `apps/web/package-lock.json`.
+
+### How to set up Amplify — step by step
+
+**Step 1** — AWS Console → **Amplify** → **Create new app**
+- Source code provider: **GitHub**
+- Authenticate and select your repository
+- Branch: **master** (or `main` — Amplify will deploy whenever this branch gets a push)
+
+Note: `master` and `main` are just names. Git's default was `master` historically. GitHub changed the default to `main` in 2020. Your repo uses `master`. The name itself does not matter — what matters is you select whichever branch you actually push to.
+
+**Step 2** — App settings
+- App name: anything (e.g. `apna-fashion-mart`)
+- **Important**: Amplify will detect `amplify.yml` from your repo automatically. You do NOT need to re-enter the build commands here.
+
+**Step 3** — Add environment variables
+Amplify → your app → **Environment variables** → **Manage variables**
+
+Add all the production values from `.env.local`:
+```
+NEXT_PUBLIC_COGNITO_USER_POOL_ID  = ap-south-1_3HoR7ATA9
+NEXT_PUBLIC_COGNITO_CLIENT_ID     = 2p1qrpgnb70skct4ea6o3ompnd
+NEXT_PUBLIC_COGNITO_REGION        = ap-south-1
+NEXT_PUBLIC_API_URL               = https://709m6g0t8a.execute-api.ap-south-1.amazonaws.com
+NEXT_PUBLIC_APP_URL               = https://apnafashionmart.com
+ANTHROPIC_API_KEY                 = (your key)
+RESEND_API_KEY                    = (your key)
+RESEND_FROM_EMAIL                 = noreply@apnafashionmart.com
+NEXT_PUBLIC_RAZORPAY_KEY_ID       = (your key)
+RAZORPAY_KEY_SECRET               = (your key)
+```
+
+**Step 4** — Review and deploy
+- Review the settings
+- Click **Save and deploy**
+- Amplify starts a build — you can watch the log in real time
+
+**Step 5** — View your deployed URL
+After a successful build, Amplify gives you a URL like:
+```
+https://master.dcrhvhpc3mowo.amplifyapp.com
+```
+This always works even before you connect your custom domain.
+
+### Actual values for this project
+
+```
+App ID:          dcrhvhpc3mowo
+Default URL:     https://master.dcrhvhpc3mowo.amplifyapp.com
+CloudFront:      d37mc4rhfdnuca.cloudfront.net
+Custom domain:   apnafashionmart.com + www.apnafashionmart.com
+```
+
+---
+
+## PHASE 7C — Custom Domain with Cloudflare DNS
+
+### The situation
+
+The domain `apnafashionmart.com` is registered and was previously deployed via Cloudflare Pages. Cloudflare is the DNS provider and the Cloudflare proxy (orange cloud) provides DDoS protection, WAF, and CDN.
+
+The goal: point the domain to Amplify while keeping Cloudflare's security features.
+
+### Two approaches: Route 53 vs Manual configuration
+
+**Route 53** (AWS's DNS service):
+- Amplify can automatically create all DNS records
+- BUT: requires a paid AWS account. Free Tier accounts get the error:
+  `"Free Tier accounts are not supported for this service."`
+- You also lose Cloudflare's DDoS/CDN/WAF protection if you move DNS to Route 53
+
+**Manual configuration** (what we use):
+- Keep Cloudflare as the DNS provider
+- Manually add the DNS records Amplify tells you to add
+- Keep the orange cloud proxy (Cloudflare DDoS protection stays active)
+
+Use manual configuration: in Amplify → Hosting → Custom domains → Add domain → when Amplify asks about DNS provider, select **Manual configuration** (not Route 53).
+
+### The DNS records you need to add in Cloudflare
+
+Amplify gives you specific records to add. For this project:
+
+| Type | Name | Target | Cloudflare Proxy | Purpose |
+|------|------|--------|-----------------|---------|
+| CNAME | `_783c117a...` (validation name) | `_783c117a...acm-validations.aws` | DNS only (grey) | ACM SSL certificate validation |
+| CNAME | `@` (root domain) | `d37mc4rhfdnuca.cloudfront.net` | Proxied (orange) | Route apnafashionmart.com to Amplify |
+| CNAME | `www` | `d37mc4rhfdnuca.cloudfront.net` | Proxied (orange) | Route www.apnafashionmart.com to Amplify |
+
+**Critical rules:**
+- The SSL validation CNAME (`_783c117a...`) must be **DNS only (grey cloud)**. If it is proxied, AWS cannot verify the certificate and the SSL setup will stall.
+- The traffic CNAMEs (`@` and `www`) should be **Proxied (orange cloud)** to keep Cloudflare's DDoS protection and CDN.
+
+### Why keeping Cloudflare proxy is safe with Amplify
+
+When Cloudflare proxy is orange, traffic flows like this:
+```
+User → Cloudflare edge (DDoS filter, WAF, cache) → Amplify CloudFront → your app
+```
+The user's request goes through Cloudflare first (security benefits) then to Amplify.
+
+The potential conflict: Cloudflare adds HTTPS, Amplify adds HTTPS. Two HTTPS layers can cause a redirect loop.
+
+**Fix**: Set Cloudflare SSL/TLS encryption mode to **Full (strict)**.
+
+- **Flexible** = Cloudflare ↔ origin is HTTP. Causes loops because Amplify redirects HTTP to HTTPS.
+- **Full** = Cloudflare ↔ origin is HTTPS but Cloudflare doesn't verify the certificate. Works but less secure.
+- **Full (strict)** = Cloudflare ↔ origin is HTTPS AND verifies the certificate. Correct and secure.
+
+Go to Cloudflare → your domain → **SSL/TLS** → **Overview** → select **Full (strict)**.
+
+### Amplify domain activation states
+
+After adding DNS records, Amplify goes through these states:
+```
+SSL creation       → Amplify requests a certificate from AWS ACM
+SSL configuration  → Amplify waits for you to add the validation CNAME
+Domain activation  → Amplify detects the DNS records and activates the domain
+```
+
+Once you add the DNS records in Cloudflare:
+- Cloudflare updates DNS within seconds
+- ACM certificate validation takes 2–30 minutes to propagate globally
+- Amplify domain activation: typically 5–30 minutes after DNS propagates
+
+You do NOT need to click anything. Amplify polls the DNS automatically and progresses when it detects the records.
+
+### What to delete from Cloudflare before adding new records
+
+Before adding the new CNAME records, delete any old DNS records pointing to the previous hosting provider (Cloudflare Pages, Vercel, etc.). If old `@` or `www` CNAMEs exist pointing elsewhere, the new records will conflict.
+
+### The TXT record and TTL explained
+
+Amplify may also ask you to add a TXT record for additional ownership verification. TTL (Time To Live) is how long DNS servers cache the record before checking again. A 1 hour TTL means DNS changes propagate globally within ~1 hour. This is standard — you do not need to lower it.
+
+### After domain activation
+
+Once Amplify shows the domain as active:
+- `https://apnafashionmart.com` → serves your Next.js app via Amplify + Cloudflare
+- `https://www.apnafashionmart.com` → same
+- Old Cloudflare Pages deployment is bypassed (the DNS records now point to Amplify's CloudFront)
+
+### Verify the deployment
+
+Test key pages:
+```
+https://apnafashionmart.com         → home page loads
+https://apnafashionmart.com/api/... → Next.js API routes work
+```
+
+Check that environment variables are working:
+- Open the app and try to sign in (tests Cognito)
+- Browse products (tests API Gateway → Lambda → Aurora)
+- Check the browser Network tab — API calls should go to `709m6g0t8a.execute-api.ap-south-1.amazonaws.com`
+
+---
+
+## Final Architecture Overview
+
+```
+                    ┌─────────────────────────────────────┐
+                    │         apnafashionmart.com          │
+                    │         www.apnafashionmart.com      │
+                    └──────────────┬──────────────────────┘
+                                   │
+                    ┌──────────────▼──────────────────────┐
+                    │         Cloudflare Proxy             │
+                    │   DDoS protection, WAF, CDN cache    │
+                    └──────────────┬──────────────────────┘
+                                   │
+                    ┌──────────────▼──────────────────────┐
+                    │     AWS Amplify + CloudFront         │
+                    │  d37mc4rhfdnuca.cloudfront.net       │
+                    │  Hosts Next.js (SSR + API routes)    │
+                    └──────────────┬──────────────────────┘
+                                   │
+              ┌────────────────────┼────────────────────┐
+              │                    │                    │
+ ┌────────────▼───┐   ┌────────────▼───┐   ┌──────────▼────────┐
+ │ AWS Cognito    │   │  API Gateway   │   │  S3 + CloudFront  │
+ │ User Pool      │   │ afm-api HTTP   │   │  Media storage    │
+ │ Authentication │   │ 709m6g0t8a...  │   │  d3tgg59fq5...    │
+ └────────────────┘   └───────┬────────┘   └───────────────────┘
+         │                    │
+         │            ┌───────▼────────┐
+         │            │  Lambda afm-api │
+         │            │  Node.js 20.x  │
+         │            └───────┬────────┘
+         │                    │
+         │            ┌───────▼────────┐
+         │            │ Aurora Serverless│
+         │            │ PostgreSQL      │
+         │            │ IAM auth        │
+         └────────────► afm-auth-trigger│
+                       (Post Confirmation)
+```
+
+## Progress Tracker
+
+| Phase | Service | Status |
 |---|---|---|
-| 7 | Amplify | Hosts the Next.js website on AWS with automatic GitHub CI/CD deploys |
+| 1 | IAM | ✅ Done |
+| 2 | Cognito | ✅ Done |
+| 3 | RDS Aurora PostgreSQL | ✅ Done |
+| 4 | S3 + CloudFront | ✅ Done |
+| 5 | Lambda | ✅ Done |
+| 6 | API Gateway | ✅ Done |
+| 7A | Cognito Auth Trigger | ✅ Done |
+| 7B | Amplify Hosting + CI/CD | ✅ Done |
+| 7C | Custom Domain (Cloudflare + Amplify) | ✅ Done |

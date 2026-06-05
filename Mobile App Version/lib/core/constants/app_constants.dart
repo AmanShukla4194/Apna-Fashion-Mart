@@ -5,10 +5,13 @@ abstract class AppConstants {
   static const companyName = 'Apna Fashion Mart Pvt. Ltd.';
   static const supportEmail = 'support@apnafashionmart.in';
   static const supportPhone = '+91 98765 43210';
-  static const websiteUrl = 'https://apnafashionmart.in';
-  static const privacyPolicyUrl = 'https://apnafashionmart.in/legal/privacy';
-  static const termsUrl = 'https://apnafashionmart.in/legal/terms';
-  static const refundPolicyUrl = 'https://apnafashionmart.in/legal/refund';
+  static const websiteUrl = 'https://apnafashionmart.com';
+  static const privacyPolicyUrl = 'https://apnafashionmart.com/legal/privacy';
+  static const termsUrl = 'https://apnafashionmart.com/legal/terms';
+  static const refundPolicyUrl = 'https://apnafashionmart.com/legal/refund';
+  static const becomeASellerUrl = 'https://apnafashionmart.com/become-a-seller';
+  static const vendorAgreementUrl = 'https://apnafashionmart.com/legal/vendor';
+  static const nearbyShopsApiUrl = 'https://apnafashionmart.com/api/nearby-shops';
 
   // API resource / table names (used as path segments in REST calls)
   static const tableProducts = 'products';

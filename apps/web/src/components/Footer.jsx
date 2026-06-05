@@ -44,10 +44,10 @@ function Footer() {
           <div>
             <h4>For Boutiques</h4>
             <ul>
-              <li><Link href="/legal/vendor">Open your storefront</Link></li>
-              <li><Link href="/legal/vendor#verify">Verification process</Link></li>
-              <li><Link href="/legal/vendor#commission">Commission &amp; payouts</Link></li>
-              <li><Link href="/legal/vendor#standards">Listing standards</Link></li>
+              <li><Link href="/become-a-seller">Open your storefront</Link></li>
+              <li><Link href="/become-a-seller#verify">Verification process</Link></li>
+              <li><Link href="/become-a-seller#commission">Commission &amp; payouts</Link></li>
+              <li><Link href="/become-a-seller#standards">Listing standards</Link></li>
               <li><Link href="/legal/vendor">Vendor Agreement</Link></li>
             </ul>
           </div>

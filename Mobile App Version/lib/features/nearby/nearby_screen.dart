@@ -1,47 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import '../../core/theme/afm_theme.dart';
+import 'package:dio/dio.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+// ─── model ───────────────────────────────────────────────────────────────────
 
 class NearbyShop {
   final String id;
   final String name;
-  final String imageUrl;
-  final double latitude;
-  final double longitude;
+  final String address;
+  final LatLng position;
   final double distanceKm;
-  final double rating;
-  final int reviewCount;
-  final bool isVerified;
-  final bool isOpen;
-  final String hours;
-  final List<String> tags;
-  final int productCount;
+  final String? hours;
+  final String? phone;
+  final String? website;
+  final String? shopType;
 
   const NearbyShop({
     required this.id,
     required this.name,
-    required this.imageUrl,
-    required this.latitude,
-    required this.longitude,
+    required this.address,
+    required this.position,
     required this.distanceKm,
-    required this.rating,
-    required this.reviewCount,
-    required this.isVerified,
-    required this.isOpen,
-    required this.hours,
-    required this.tags,
-    required this.productCount,
+    this.hours,
+    this.phone,
+    this.website,
+    this.shopType,
   });
+
+  factory NearbyShop.fromJson(Map<String, dynamic> json) => NearbyShop(
+        id:          json['id'] as String,
+        name:        json['name'] as String? ?? 'Fashion Store',
+        address:     json['address'] as String? ?? '',
+        position:    LatLng(
+          (json['lat'] as num).toDouble(),
+          (json['lng'] as num).toDouble(),
+        ),
+        distanceKm:  (json['distanceKm'] as num?)?.toDouble() ?? 0,
+        hours:       json['hours'] as String?,
+        phone:       json['phone'] as String?,
+        website:     json['website'] as String?,
+        shopType:    json['shopType'] as String?,
+      );
 }
 
-final _mockShops = [
-  {'id': 'aanya', 'name': 'Aanya Atelier',   'area': 'Bandra West',  'lat': 19.0596, 'lng': 72.8295, 'verified': true,  'rating': 4.8, 'distance': '1.4 km', 'tags': ['Ethnic', 'Bridal', 'Handloom']},
-  {'id': 'mira',  'name': 'Mira Weaves',     'area': 'Khar West',    'lat': 19.0734, 'lng': 72.8262, 'verified': true,  'rating': 4.6, 'distance': '2.1 km', 'tags': ['Sarees', 'Silk']},
-  {'id': 'kala',  'name': 'Kala Streetwear', 'area': 'Lokhandwala',  'lat': 19.1276, 'lng': 72.8285, 'verified': false, 'rating': 4.4, 'distance': '2.7 km', 'tags': ['Streetwear', "Men's"]},
-  {'id': 'rumi',  'name': 'Rumi Bazaar',     'area': 'Pali Hill',    'lat': 19.0633, 'lng': 72.8362, 'verified': true,  'rating': 4.7, 'distance': '1.9 km', 'tags': ['Western', 'Casual']},
-];
+// ─── constants ────────────────────────────────────────────────────────────────
+
+const _appBaseUrl  = 'https://apnafashionmart.com';
+const _navy800     = Color(0xFF001F3F);
+const _magenta600  = Color(0xFFFF1493);
+const _defaultPos  = LatLng(19.0596, 72.8295); // Mumbai fallback
+
+// ─── screen ──────────────────────────────────────────────────────────────────
 
 class NearbyScreen extends ConsumerStatefulWidget {
   const NearbyScreen({super.key});
@@ -51,94 +64,193 @@ class NearbyScreen extends ConsumerStatefulWidget {
 }
 
 class _NearbyScreenState extends ConsumerState<NearbyScreen> {
-  GoogleMapController? _mapController;
-  LatLng _center = const LatLng(19.0596, 72.8295);
+  final _mapController  = MapController();
+  LatLng _center        = _defaultPos;
   bool _locationLoading = true;
-  Map<String, dynamic>? _selectedShop;
-  String _selectedFilter = 'All';
-  final Set<Marker> _markers = {};
-  final List<String> _filters = ['All', 'Verified', 'Open Now', 'Within 2 km'];
+
+  List<NearbyShop> _shops   = [];
+  bool _shopsLoading        = false;
+  String? _shopsError;
+  NearbyShop? _selectedShop;
+
+  // filters
+  int  _radiusKm = 5;
+  bool _openNow  = false;
+
+  final _dio = Dio();
 
   @override
   void initState() {
     super.initState();
     _requestLocation();
-    _buildMarkers();
-  }
-
-  Future<void> _requestLocation() async {
-    try {
-      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
-      if (!serviceEnabled) {
-        if (mounted) setState(() => _locationLoading = false);
-        return;
-      }
-      LocationPermission permission = await Geolocator.checkPermission();
-      if (permission == LocationPermission.denied) {
-        permission = await Geolocator.requestPermission();
-        if (permission == LocationPermission.denied) {
-          if (mounted) setState(() => _locationLoading = false);
-          return;
-        }
-      }
-      final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
-      if (mounted) {
-        setState(() {
-          _center = LatLng(pos.latitude, pos.longitude);
-          _locationLoading = false;
-        });
-        _mapController?.animateCamera(CameraUpdate.newLatLngZoom(_center, 14));
-      }
-    } catch (_) {
-      if (mounted) setState(() => _locationLoading = false);
-    }
-  }
-
-  void _buildMarkers() {
-    for (final shop in _mockShops) {
-      _markers.add(Marker(
-        markerId: MarkerId(shop['id'] as String),
-        position: LatLng(shop['lat'] as double, shop['lng'] as double),
-        onTap: () => setState(() => _selectedShop = shop),
-        infoWindow: InfoWindow(title: shop['name'] as String),
-        icon: BitmapDescriptor.defaultMarkerWithHue(
-          (shop['verified'] as bool) ? BitmapDescriptor.hueAzure : BitmapDescriptor.hueRose,
-        ),
-      ));
-    }
   }
 
   @override
   void dispose() {
-    _mapController?.dispose();
+    _mapController.dispose();
     super.dispose();
   }
 
+  // ── location ──────────────────────────────────────────────────────────────
+
+  Future<void> _requestLocation() async {
+    setState(() => _locationLoading = true);
+    try {
+      final bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) throw Exception('Location services disabled');
+
+      LocationPermission perm = await Geolocator.checkPermission();
+      if (perm == LocationPermission.denied) {
+        perm = await Geolocator.requestPermission();
+        if (perm == LocationPermission.denied) throw Exception('Permission denied');
+      }
+      if (perm == LocationPermission.deniedForever) throw Exception('Permission permanently denied');
+
+      final pos = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      if (!mounted) return;
+
+      setState(() {
+        _center          = LatLng(pos.latitude, pos.longitude);
+        _locationLoading = false;
+      });
+      _mapController.move(_center, 14);
+      _fetchShops();
+    } catch (_) {
+      if (mounted) setState(() => _locationLoading = false);
+      _fetchShops();
+    }
+  }
+
+  // ── fetch ─────────────────────────────────────────────────────────────────
+
+  Future<void> _fetchShops() async {
+    setState(() { _shopsLoading = true; _shopsError = null; });
+    try {
+      final resp = await _dio.get(
+        '$_appBaseUrl/api/nearby-shops',
+        queryParameters: {
+          'lat':     _center.latitude,
+          'lng':     _center.longitude,
+          'radius':  _radiusKm,
+          'openNow': _openNow,
+        },
+        options: Options(receiveTimeout: const Duration(seconds: 30)),
+      );
+      if (resp.statusCode != 200) throw Exception('Server error ${resp.statusCode}');
+      final raw = (resp.data['shops'] as List? ?? []).cast<Map<String, dynamic>>();
+      if (!mounted) return;
+      setState(() { _shops = raw.map(NearbyShop.fromJson).toList(); _shopsLoading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _shopsError = e.toString(); _shopsLoading = false; });
+    }
+  }
+
+  // ── sort ─────────────────────────────────────────────────────────────────
+
+  List<NearbyShop> get _sortedShops {
+    final list = List<NearbyShop>.from(_shops);
+    list.sort((a, b) => a.distanceKm.compareTo(b.distanceKm)); // always nearest for OSM
+    return list;
+  }
+
+  // ── filter chip ───────────────────────────────────────────────────────────
+
+  Widget _chip(String label, bool active, VoidCallback onTap) => GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        color: active ? _magenta600 : Colors.white.withValues(alpha: 0.93),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.08), blurRadius: 4)],
+      ),
+      child: Text(label, style: TextStyle(
+        fontSize: 12, fontWeight: FontWeight.w600,
+        color: active ? Colors.white : _navy800,
+      )),
+    ),
+  );
+
+  // ── build ─────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
+    final shops = _sortedShops;
+
     return Scaffold(
-      backgroundColor: AfmColors.navy800,
+      backgroundColor: _navy800,
       body: Stack(
         children: [
+          // ── MAP (OpenStreetMap via flutter_map) ──────────────────────────
           Positioned.fill(
-            child: GoogleMap(
-              onMapCreated: (controller) => setState(() => _mapController = controller),
-              initialCameraPosition: CameraPosition(target: _center, zoom: 14),
-              markers: _markers,
-              myLocationEnabled: true,
-              myLocationButtonEnabled: false,
-              zoomControlsEnabled: false,
-              mapToolbarEnabled: false,
-              onTap: (_) => setState(() => _selectedShop = null),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _center,
+                initialZoom: 14,
+                onTap: (_, __) => setState(() => _selectedShop = null),
+              ),
+              children: [
+                // OSM tile layer — free, no API key
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.apnafashionmart.app',
+                  maxZoom: 19,
+                ),
+                // Shop markers
+                MarkerLayer(
+                  markers: [
+                    // User location
+                    Marker(
+                      point: _center,
+                      width: 20, height: 20,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4285F4),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 3),
+                          boxShadow: [BoxShadow(color: Colors.blue.withValues(alpha: 0.4), blurRadius: 8)],
+                        ),
+                      ),
+                    ),
+                    // Shop markers
+                    ...shops.map((shop) => Marker(
+                      point: shop.position,
+                      width: 26, height: 26,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() => _selectedShop = shop);
+                          _mapController.move(shop.position, 16);
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: _magenta600,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2.5),
+                            boxShadow: [BoxShadow(color: _magenta600.withValues(alpha: 0.45), blurRadius: 8)],
+                          ),
+                          child: const Icon(Icons.store, color: Colors.white, size: 12),
+                        ),
+                      ),
+                    )),
+                  ],
+                ),
+                // OSM attribution (required by OSM license)
+                const SimpleAttributionWidget(
+                  source: Text('OpenStreetMap contributors'),
+                ),
+              ],
             ),
           ),
 
-          // Search bar + filter chips
+          // ── TOP OVERLAY ──────────────────────────────────────────────────
           Positioned(
             top: 0, left: 0, right: 0,
             child: SafeArea(
               child: Column(
                 children: [
+                  // Search bar
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                     child: Container(
@@ -159,76 +271,106 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
+                  // Filter chips
                   SizedBox(
-                    height: 36,
-                    child: ListView.separated(
+                    height: 38,
+                    child: ListView(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _filters.length,
-                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                      itemBuilder: (_, i) {
-                        final active = _filters[i] == _selectedFilter;
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedFilter = _filters[i]),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: active ? AfmColors.magenta600 : Colors.white.withValues(alpha: 0.92),
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                            child: Text(_filters[i], style: TextStyle(
-                              fontSize: 12, fontWeight: FontWeight.w600,
-                              color: active ? Colors.white : AfmColors.navy800,
-                            )),
-                          ),
-                        );
-                      },
+                      children: [
+                        _chip('Open Now', _openNow, () {
+                          setState(() => _openNow = !_openNow);
+                          _fetchShops();
+                        }),
+                        const SizedBox(width: 8),
+                        for (final km in [1, 3, 5, 10, 25]) ...[
+                          _chip('$km km', _radiusKm == km, () {
+                            setState(() => _radiusKm = km);
+                            _fetchShops();
+                          }),
+                          const SizedBox(width: 8),
+                        ],
+                      ],
                     ),
                   ),
+                  // Loading / error banner
+                  if (_shopsLoading)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          SizedBox(width: 15, height: 15, child: CircularProgressIndicator(strokeWidth: 2, color: _magenta600)),
+                          SizedBox(width: 10),
+                          Text('Searching nearby shops…', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: _navy800)),
+                        ],
+                      ),
+                    ),
+                  if (_shopsError != null)
+                    Container(
+                      margin: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                      decoration: BoxDecoration(color: Colors.red.shade50, borderRadius: BorderRadius.circular(12)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.red, size: 16),
+                          const SizedBox(width: 8),
+                          const Text('Could not load shops', style: TextStyle(fontSize: 13, color: Colors.red)),
+                          const SizedBox(width: 8),
+                          GestureDetector(
+                            onTap: _fetchShops,
+                            child: const Text('Retry', style: TextStyle(fontSize: 13, color: _magenta600, fontWeight: FontWeight.w600)),
+                          ),
+                        ],
+                      ),
+                    ),
                 ],
               ),
             ),
           ),
 
-          // Location FAB
+          // ── MY LOCATION FAB ───────────────────────────────────────────────
           Positioned(
             right: 16,
-            bottom: _selectedShop != null ? 220 : 100,
+            bottom: _selectedShop != null ? 270 : 100,
             child: FloatingActionButton.small(
               heroTag: 'locate_nearby',
               onPressed: _requestLocation,
               backgroundColor: Colors.white,
               child: _locationLoading
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: AfmColors.navy800))
-                  : const Icon(Icons.my_location, color: AfmColors.navy800, size: 20),
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: _navy800))
+                  : const Icon(Icons.my_location, color: _navy800, size: 20),
             ),
           ),
 
-          // Selected shop card
+          // ── SELECTED SHOP CARD ────────────────────────────────────────────
           if (_selectedShop != null)
             Positioned(
               bottom: 0, left: 0, right: 0,
               child: SafeArea(
-                child: _ShopInfoCard(
+                child: _ShopCard(
                   shop: _selectedShop!,
                   onClose: () => setState(() => _selectedShop = null),
-                  onVisit: () => Navigator.of(context).pushNamed('/shop/${_selectedShop!['id']}'),
+                  userPosition: _center,
                 ),
               ),
             ),
 
-          // List button
+          // ── LIST BUTTON ───────────────────────────────────────────────────
           if (_selectedShop == null)
             Positioned(
               bottom: 16, left: 0, right: 0,
               child: SafeArea(
                 child: Center(
                   child: GestureDetector(
-                    onTap: () => _showShopListSheet(context),
+                    onTap: () => _showListSheet(context, shops),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                       decoration: BoxDecoration(
-                        color: AfmColors.navy800,
+                        color: _navy800,
                         borderRadius: BorderRadius.circular(30),
                         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.3), blurRadius: 12)],
                       ),
@@ -237,8 +379,10 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
                         children: [
                           const Icon(Icons.list, color: Colors.white, size: 18),
                           const SizedBox(width: 8),
-                          Text('${_mockShops.length} boutiques nearby',
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14)),
+                          Text(
+                            '${shops.length} fashion shops nearby',
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14),
+                          ),
                         ],
                       ),
                     ),
@@ -251,14 +395,16 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
     );
   }
 
-  void _showShopListSheet(BuildContext context) {
+  // ── bottom sheet ──────────────────────────────────────────────────────────
+
+  void _showListSheet(BuildContext context, List<NearbyShop> shops) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.6,
-        maxChildSize: 0.9,
+        initialChildSize: 0.55,
+        maxChildSize: 0.92,
         minChildSize: 0.3,
         builder: (_, controller) => Container(
           decoration: const BoxDecoration(
@@ -270,53 +416,61 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
               const SizedBox(height: 8),
               Container(width: 40, height: 4, decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2))),
               Padding(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Row(
                   children: [
-                    const Text('Nearby Boutiques', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AfmColors.navy800, fontFamily: 'PlayfairDisplay')),
+                    const Text('Nearby Fashion Shops', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: _navy800)),
                     const Spacer(),
-                    Text('${_mockShops.length} found', style: const TextStyle(fontSize: 13, color: Color(0xFF8896A5))),
+                    Text('${shops.length} found', style: const TextStyle(fontSize: 13, color: Color(0xFF8896A5))),
                   ],
                 ),
               ),
               const Divider(height: 1),
-              Expanded(
-                child: ListView.builder(
-                  controller: controller,
-                  itemCount: _mockShops.length,
-                  itemBuilder: (_, i) {
-                    final s = _mockShops[i];
-                    return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      leading: CircleAvatar(
-                        backgroundColor: (s['verified'] as bool) ? const Color(0xFF1DA1F2) : AfmColors.magenta600,
-                        child: Text((s['name'] as String)[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                      ),
-                      title: Row(
-                        children: [
-                          Text(s['name'] as String, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-                          if (s['verified'] as bool) ...[
-                            const SizedBox(width: 4),
-                            const Icon(Icons.verified, color: Color(0xFF1DA1F2), size: 14),
-                          ],
-                        ],
-                      ),
-                      subtitle: Text('${s['area']} · ${s['distance']} · ★ ${s['rating']}',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF8896A5))),
-                      trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF8896A5)),
-                      onTap: () {
-                        Navigator.pop(context);
-                        setState(() {
-                          _selectedShop = s;
-                          _mapController?.animateCamera(CameraUpdate.newLatLngZoom(
-                            LatLng(s['lat'] as double, s['lng'] as double), 16,
-                          ));
-                        });
-                      },
-                    );
-                  },
+              if (shops.isEmpty)
+                const Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text('🔍', style: TextStyle(fontSize: 40)),
+                        SizedBox(height: 12),
+                        Text('No shops found nearby', style: TextStyle(fontWeight: FontWeight.w600, color: _navy800)),
+                        SizedBox(height: 4),
+                        Text('Try increasing the search radius', style: TextStyle(fontSize: 13, color: Color(0xFF8896A5))),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    controller: controller,
+                    itemCount: shops.length,
+                    itemBuilder: (_, i) {
+                      final s = shops[i];
+                      return ListTile(
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                        leading: CircleAvatar(
+                          backgroundColor: _magenta600,
+                          child: Text(s.name[0], style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        ),
+                        title: Text(s.name, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                        subtitle: Text(
+                          '${s.distanceKm} km away${s.shopType != null ? ' · ${s.shopType}' : ''}',
+                          style: const TextStyle(fontSize: 12, color: Color(0xFF8896A5)),
+                        ),
+                        trailing: const Icon(Icons.arrow_forward_ios, size: 14, color: Color(0xFF8896A5)),
+                        onTap: () {
+                          Navigator.pop(context);
+                          setState(() {
+                            _selectedShop = s;
+                            _mapController.move(s.position, 16);
+                          });
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -325,74 +479,96 @@ class _NearbyScreenState extends ConsumerState<NearbyScreen> {
   }
 }
 
-class _ShopInfoCard extends StatelessWidget {
-  final Map<String, dynamic> shop;
+// ─── shop detail card ─────────────────────────────────────────────────────────
+
+class _ShopCard extends StatelessWidget {
+  final NearbyShop shop;
   final VoidCallback onClose;
-  final VoidCallback onVisit;
-  const _ShopInfoCard({required this.shop, required this.onClose, required this.onVisit});
+  final LatLng userPosition;
+
+  const _ShopCard({required this.shop, required this.onClose, required this.userPosition});
+
+  Future<void> _openDirections() async {
+    final uri = Uri.parse(
+      'https://www.openstreetmap.org/directions'
+      '?from=${userPosition.latitude},${userPosition.longitude}'
+      '&to=${shop.position.latitude},${shop.position.longitude}',
+    );
+    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
 
   @override
   Widget build(BuildContext context) {
-    final tags = (shop['tags'] as List).cast<String>();
     return Container(
       margin: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 20)],
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(shop['name'] as String, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AfmColors.navy800)),
-                        if (shop['verified'] as bool) ...[
-                          const SizedBox(width: 4),
-                          const Icon(Icons.verified, color: Color(0xFF1DA1F2), size: 16),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 2),
-                    Text('${shop['area']} · ${shop['distance']} · ★ ${shop['rating']}',
-                      style: const TextStyle(fontSize: 12, color: Color(0xFF8896A5))),
-                  ],
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(shop.name, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: _navy800)),
+                ),
+                GestureDetector(onTap: onClose, child: const Icon(Icons.close, size: 20, color: Color(0xFF8896A5))),
+              ],
+            ),
+            if (shop.address.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text(shop.address, style: const TextStyle(fontSize: 12, color: Color(0xFF8896A5))),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined, size: 14, color: _magenta600),
+                Text(' ${shop.distanceKm} km away', style: const TextStyle(fontSize: 13, color: _navy800)),
+                if (shop.shopType != null) ...[
+                  const SizedBox(width: 10),
+                  const Icon(Icons.storefront_outlined, size: 14, color: Color(0xFF8896A5)),
+                  Text(' ${shop.shopType}', style: const TextStyle(fontSize: 12, color: Color(0xFF8896A5))),
+                ],
+              ],
+            ),
+            if (shop.hours != null) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const Icon(Icons.access_time, size: 13, color: Color(0xFF8896A5)),
+                const SizedBox(width: 4),
+                Expanded(child: Text(shop.hours!, style: const TextStyle(fontSize: 11, color: Color(0xFF8896A5)))),
+              ]),
+            ],
+            if (shop.phone != null) ...[
+              const SizedBox(height: 4),
+              Row(children: [
+                const Icon(Icons.phone_outlined, size: 13, color: Color(0xFF8896A5)),
+                const SizedBox(width: 4),
+                Text(shop.phone!, style: const TextStyle(fontSize: 12, color: Color(0xFF8896A5))),
+              ]),
+            ],
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _openDirections,
+                icon: const Icon(Icons.directions, size: 16),
+                label: const Text('Get Directions'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: _magenta600,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
               ),
-              IconButton(onPressed: onClose, icon: const Icon(Icons.close, size: 20, color: Color(0xFF8896A5))),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Wrap(
-            spacing: 6,
-            children: tags.map((t) => Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-              decoration: BoxDecoration(color: const Color(0xFFF0F4FF), borderRadius: BorderRadius.circular(12)),
-              child: Text(t, style: const TextStyle(fontSize: 11, color: AfmColors.navy800, fontWeight: FontWeight.w500)),
-            )).toList(),
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: onVisit,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AfmColors.magenta600,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              ),
-              child: const Text('Visit Boutique →', style: TextStyle(fontWeight: FontWeight.w600)),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
