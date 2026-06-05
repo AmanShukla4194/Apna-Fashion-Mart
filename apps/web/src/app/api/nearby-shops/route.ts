@@ -49,7 +49,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'lat and lng are required' }, { status: 400 });
   }
 
-  const apiKey = process.env.GEOAPIFY_API_KEY;
+  const apiKey = process.env['GEOAPIFY_API_KEY'];
   if (!apiKey) {
     return NextResponse.json(
       { error: 'GEOAPIFY_API_KEY is not set in environment variables', shops: [] },

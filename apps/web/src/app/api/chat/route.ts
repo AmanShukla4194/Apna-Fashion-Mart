@@ -156,7 +156,7 @@ HANDLING COMMON SCENARIOS
 `.trim();
 
 export async function POST(req: Request) {
-  const apiKey = process.env.GROQ_API_KEY;
+  const apiKey = process.env['GROQ_API_KEY'];
 
   if (!apiKey) {
     return new Response(

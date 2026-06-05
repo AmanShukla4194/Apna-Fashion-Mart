@@ -5,11 +5,11 @@ const nextConfig = {
       { protocol: 'https', hostname: '**.amazonaws.com' },
       { protocol: 'https', hostname: '**.cloudfront.net' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
+      { protocol: 'https', hostname: 'places.googleapis.com' },
     ],
   },
-  experimental: {
-    serverComponentsExternalPackages: ['pg'],
-  },
+  // Moved from experimental.serverComponentsExternalPackages (deprecated)
+  serverExternalPackages: ['pg'],
 };
 
 export default nextConfig;
