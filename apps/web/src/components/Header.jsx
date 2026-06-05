@@ -16,6 +16,12 @@ export default function Header({ view, setView }) {
   const router = useRouter();
   const go = (v) => { setView?.(v); setMenuOpen(false); };
 
+  // Hide AI FAB and lock body scroll when mobile menu is open
+  useEffect(() => {
+    document.body.classList.toggle('mobile-menu-open', menuOpen);
+    return () => document.body.classList.remove('mobile-menu-open');
+  }, [menuOpen]);
+
   useEffect(() => {
     if (!navigator?.geolocation) {
       setLocationLabel('Set your location');
