@@ -156,7 +156,8 @@ HANDLING COMMON SCENARIOS
 `.trim();
 
 export async function POST(req: Request) {
-  const apiKey = process.env['GROQ_API_KEY'];
+  // NEXT_PUBLIC_ vars are inlined at build time by Next.js (dot notation required)
+  const apiKey = process.env.NEXT_PUBLIC_GROQ_API_KEY || process.env.GROQ_API_KEY;
 
   if (!apiKey) {
     return new Response(
