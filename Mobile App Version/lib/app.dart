@@ -29,6 +29,7 @@ import 'features/chatbot/chatbot_screen.dart';
 import 'features/auth/login_screen.dart';
 import 'features/auth/register_screen.dart';
 import 'features/auth/otp_screen.dart';
+import 'features/auth/verify_email_screen.dart';
 import 'features/auth/forgot_password_screen.dart';
 import 'features/vendor/vendor_dashboard_screen.dart';
 import 'features/vendor/vendor_products_screen.dart';
@@ -54,7 +55,7 @@ final _routerProvider = Provider<GoRouter>((ref) {
   final notifier = _AuthRouterNotifier(ref);
   ref.onDispose(notifier.dispose);
 
-  const publicRoutes = {'/login', '/register', '/otp', '/forgot-password'};
+  const publicRoutes = {'/login', '/register', '/otp', '/verify-email', '/forgot-password'};
   const protectedPrefixes = ['/account', '/checkout', '/chatbot'];
 
   return GoRouter(
@@ -163,6 +164,16 @@ final _routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
       GoRoute(path: '/otp', builder: (_, __) => const OtpScreen()),
+      GoRoute(
+        path: '/verify-email',
+        builder: (_, state) {
+          final extra = state.extra as Map<String, dynamic>? ?? {};
+          return VerifyEmailScreen(
+            email: extra['email'] as String? ?? '',
+            password: extra['password'] as String? ?? '',
+          );
+        },
+      ),
       GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
     ],
   );

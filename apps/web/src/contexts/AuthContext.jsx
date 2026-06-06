@@ -5,6 +5,10 @@ import {
   signIn as amplifySignIn,
   signUp as amplifySignUp,
   signOut as amplifySignOut,
+  confirmSignUp as amplifyConfirmSignUp,
+  resendSignUpCode as amplifyResendCode,
+  resetPassword as amplifyResetPassword,
+  confirmResetPassword as amplifyConfirmResetPassword,
   getCurrentUser,
   fetchAuthSession,
   fetchUserAttributes,
@@ -27,6 +31,10 @@ const defaultAuthValue = {
   login: async () => {},
   logout: async () => {},
   signup: async () => {},
+  confirmSignUp: async () => {},
+  resendConfirmationCode: async () => {},
+  forgotPassword: async () => {},
+  confirmForgotPassword: async () => {},
   signIn: async () => {},
   signUp: async () => {},
   signOut: async () => {},
@@ -120,6 +128,26 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const confirmSignUp = async (email, code) => {
+    configureAmplify();
+    await amplifyConfirmSignUp({ username: email, confirmationCode: code });
+  };
+
+  const resendConfirmationCode = async (email) => {
+    configureAmplify();
+    await amplifyResendCode({ username: email });
+  };
+
+  const forgotPassword = async (email) => {
+    configureAmplify();
+    await amplifyResetPassword({ username: email });
+  };
+
+  const confirmForgotPassword = async (email, code, newPassword) => {
+    configureAmplify();
+    await amplifyConfirmResetPassword({ username: email, confirmationCode: code, newPassword });
+  };
+
   const signup = async (email, password, metadata = {}) => {
     configureAmplify();
     const { isSignUpComplete, userId, nextStep } = await amplifySignUp({
@@ -170,6 +198,10 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     signup,
+    confirmSignUp,
+    resendConfirmationCode,
+    forgotPassword,
+    confirmForgotPassword,
     signIn: login,
     signOut: logout,
     signUp: signup,

@@ -30,7 +30,7 @@ async function buildPool() {
     ssl: { rejectUnauthorized: false },
     max: 3,
     idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 25000, // Aurora Serverless cold start can take 10-15s
   });
 }
 

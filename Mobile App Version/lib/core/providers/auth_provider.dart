@@ -100,6 +100,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
+  // Returns true on success — caller should navigate to email verification screen
   Future<bool> signUp({
     required String email,
     required String password,
@@ -110,7 +111,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }) async {
     try {
       state = state.copyWith(error: null);
-      final user = await _authService.signUp(
+      await _authService.signUp(
         email: email,
         password: password,
         fullName: fullName,
@@ -118,16 +119,33 @@ class AuthNotifier extends StateNotifier<AuthState> {
         city: city,
         stylePreferences: stylePreferences,
       );
-      state = state.copyWith(
-        status: AuthStatus.authenticated,
-        user: user,
-      );
-      await _loadProfile(user.id);
+      // Stay unauthenticated — user must verify email first
       return true;
     } catch (e) {
       state = state.copyWith(error: _friendlyError(e));
       return false;
     }
+  }
+
+  // Confirm email with 6-digit code, then auto sign-in
+  Future<bool> confirmSignUp({
+    required String email,
+    required String password,
+    required String code,
+  }) async {
+    try {
+      state = state.copyWith(error: null);
+      await _authService.confirmSignUp(email: email, code: code);
+      // Auto sign-in after successful verification
+      return await signIn(email: email, password: password);
+    } catch (e) {
+      state = state.copyWith(error: _friendlyError(e));
+      return false;
+    }
+  }
+
+  Future<void> resendConfirmationCode({required String email}) async {
+    await _authService.resendConfirmationCode(email: email);
   }
 
   Future<void> signOut() async {

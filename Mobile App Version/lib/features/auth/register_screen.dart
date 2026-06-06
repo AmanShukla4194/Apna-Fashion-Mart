@@ -79,11 +79,14 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             stylePreferences: _selectedStyles.toList(),
           );
       if (mounted) {
-        if (_phoneController.text.trim().isNotEmpty) {
-          context.push('/otp', extra: _phoneController.text.trim());
-        } else {
-          context.go('/');
-        }
+        // Always go to email verification screen after signup
+        context.push(
+          '/verify-email',
+          extra: {
+            'email': _emailController.text.trim(),
+            'password': _passwordController.text,
+          },
+        );
       }
     } catch (e) {
       if (mounted) {

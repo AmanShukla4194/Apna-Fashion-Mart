@@ -125,9 +125,9 @@ class AuthService {
   }
 
   // ---------------------------------------------------------------------------
-  // Sign up
+  // Sign up — does NOT sign in automatically (email verification required)
   // ---------------------------------------------------------------------------
-  Future<AuthUser> signUp({
+  Future<void> signUp({
     required String email,
     required String password,
     required String fullName,
@@ -148,8 +148,7 @@ class AuthService {
     await _cognitoDio.post(
       '',
       options: Options(headers: {
-        'X-Amz-Target':
-            'AmazonCognitoIdentityProviderService.SignUp',
+        'X-Amz-Target': 'AmazonCognitoIdentityProviderService.SignUp',
       }),
       data: {
         'ClientId': Env.cognitoClientId,
@@ -158,19 +157,44 @@ class AuthService {
         'UserAttributes': attributes,
       },
     );
+    // Do NOT auto-sign-in: Cognito requires email confirmation first.
+    // After confirmSignUp(), the caller should call signIn().
+  }
 
-    final user = await signIn(email, password);
+  // ---------------------------------------------------------------------------
+  // Confirm email with 6-digit code (sent by Cognito after SignUp)
+  // ---------------------------------------------------------------------------
+  Future<void> confirmSignUp({
+    required String email,
+    required String code,
+  }) async {
+    await _cognitoDio.post(
+      '',
+      options: Options(headers: {
+        'X-Amz-Target':
+            'AmazonCognitoIdentityProviderService.ConfirmSignUp',
+      }),
+      data: {
+        'ClientId': Env.cognitoClientId,
+        'Username': email.trim(),
+        'ConfirmationCode': code.trim(),
+      },
+    );
+  }
 
-    if (city != null || stylePreferences != null) {
-      final profileData = <String, dynamic>{};
-      if (city != null) profileData['city'] = city;
-      if (stylePreferences != null) profileData['style_preferences'] = stylePreferences;
-      try {
-        await ApiService.instance.updateUserProfile(user.id, profileData);
-      } catch (_) {}
-    }
-
-    return user;
+  // Resend confirmation code if user didn't receive it
+  Future<void> resendConfirmationCode({required String email}) async {
+    await _cognitoDio.post(
+      '',
+      options: Options(headers: {
+        'X-Amz-Target':
+            'AmazonCognitoIdentityProviderService.ResendConfirmationCode',
+      }),
+      data: {
+        'ClientId': Env.cognitoClientId,
+        'Username': email.trim(),
+      },
+    );
   }
 
   // ---------------------------------------------------------------------------

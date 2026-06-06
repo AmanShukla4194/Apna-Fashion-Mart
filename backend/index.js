@@ -13,7 +13,8 @@ const categories = require('./src/handlers/categories');
 const uploads = require('./src/handlers/uploads');
 
 exports.handler = async (event) => {
-  if (event.httpMethod === 'OPTIONS') return optionsResponse();
+  const httpMethod = event.httpMethod || event.requestContext?.http?.method || '';
+  if (httpMethod === 'OPTIONS') return optionsResponse();
 
   const authHeader = event.headers?.Authorization || event.headers?.authorization;
   const jwtUser = await verifyToken(authHeader);
@@ -31,9 +32,10 @@ exports.handler = async (event) => {
     };
   }
 
-  const method = event.httpMethod;
-  const path = event.path || event.rawPath || '';
-  const pathParams = event.pathParameters || {};
+  // HTTP API (v2) uses requestContext.http.method; REST API (v1) uses httpMethod
+  const method = event.httpMethod || event.requestContext?.http?.method || 'GET';
+  const path   = event.rawPath || event.path || '';
+  const pathParams  = event.pathParameters || {};
   const queryParams = event.queryStringParameters || {};
   let body = {};
 

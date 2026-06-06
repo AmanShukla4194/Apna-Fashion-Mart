@@ -25,14 +25,23 @@ const SignupPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== passwordConfirm) { toast.error('Passwords do not match'); return; }
+    if (password.length < 8) { toast.error('Password must be at least 8 characters'); return; }
     setLoading(true);
     try {
-      await signup(email, password, name, role);
-      toast.success('Account created! Please check your email to confirm, then log in.');
-      if (role === 'vendor') router.push('/shop-login');
-      else router.push('/login');
+      // Pass metadata as an object — matches AuthContext.signup(email, password, metadata)
+      await signup(email, password, { name, role });
+      toast.success('Account created! Check your email for a verification code.');
+      // Redirect to OTP confirmation page with email in query
+      router.push(`/verify?email=${encodeURIComponent(email)}&role=${role}`);
     } catch (error) {
-      toast.error(error.message || 'Failed to create account');
+      const msg = error.message || '';
+      if (msg.includes('UsernameExistsException') || msg.includes('already exists')) {
+        toast.error('An account with this email already exists. Try logging in.');
+      } else if (msg.includes('InvalidPassword') || msg.includes('password')) {
+        toast.error('Password must be 8+ characters with letters and numbers.');
+      } else {
+        toast.error(msg || 'Failed to create account. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

@@ -23,15 +23,28 @@ const CustomerLoginPage = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { profile } = await login(email, password);
-      if (profile?.role === 'customer') {
-        toast.success('Welcome back!');
-        router.push('/customer-profile');
-      } else {
-        toast.error('Please use the correct portal for your account type.');
+      const { user, profile } = await login(email, password);
+      if (!user) { toast.error('Login failed. Please try again.'); return; }
+
+      const role = profile?.role ?? user?.role ?? 'customer';
+      if (role === 'vendor') {
+        toast.error('This is the customer portal. Please use Shop Owner Login.');
+        return;
       }
-    } catch {
-      toast.error('Invalid email or password');
+      toast.success(`Welcome back, ${user.name || 'there'}!`);
+      router.push('/account');
+    } catch (err) {
+      const msg = err.message || '';
+      if (msg.includes('UserNotConfirmedException') || msg.includes('not confirmed')) {
+        toast.error('Please verify your email first.');
+        router.push(`/verify?email=${encodeURIComponent(email)}`);
+      } else if (msg.includes('NotAuthorizedException') || msg.includes('Incorrect')) {
+        toast.error('Incorrect email or password.');
+      } else if (msg.includes('UserNotFoundException') || msg.includes('user does not exist')) {
+        toast.error('No account found with this email. Please sign up first.');
+      } else {
+        toast.error(msg || 'Login failed. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -61,7 +74,7 @@ const CustomerLoginPage = () => {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label htmlFor="password">Password</Label>
-                  <a href="#" className="text-xs text-secondary font-medium hover:underline">Forgot password?</a>
+                  <Link href="/forgot-password" className="text-xs text-secondary font-medium hover:underline">Forgot password?</Link>
                 </div>
                 <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required className="input-premium" placeholder="••••••••" />
               </div>

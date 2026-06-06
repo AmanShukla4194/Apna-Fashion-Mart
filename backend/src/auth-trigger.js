@@ -7,16 +7,18 @@ exports.handler = async (event) => {
 
   const { userAttributes } = event.request;
   const cognitoSub = userAttributes.sub;
-  const email = userAttributes.email;
-  const fullName = userAttributes.name || email.split('@')[0];
-  const phone = userAttributes.phone_number || null;
+  const email      = userAttributes.email;
+  const fullName   = userAttributes.name || email.split('@')[0];
+  const phone      = userAttributes.phone_number || null;
+  // Preserve the role the user selected during signup (customer or vendor)
+  const role       = userAttributes['custom:role'] === 'vendor' ? 'vendor' : 'customer';
 
   try {
     await query(
       `INSERT INTO users (cognito_sub, email, full_name, phone, role)
-       VALUES ($1, $2, $3, $4, 'customer')
+       VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (cognito_sub) DO NOTHING`,
-      [cognitoSub, email, fullName, phone]
+      [cognitoSub, email, fullName, phone, role]
     );
     console.log(`DB user created for cognito_sub: ${cognitoSub}`);
   } catch (err) {
