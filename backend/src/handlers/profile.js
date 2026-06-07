@@ -11,8 +11,23 @@ async function handle(ctx) {
   }
 
   requireAuth(user);
+
+  // Auto-create DB row for Cognito users who confirmed before the trigger was working
   if (!user.dbId) {
-    return error(404, 'User profile not found. Please re-verify your account.');
+    try {
+      const role = user.role === 'vendor' ? 'vendor' : 'customer';
+      const inserted = await query(
+        `INSERT INTO users (cognito_sub, email, full_name, role)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (cognito_sub) DO UPDATE SET email = EXCLUDED.email
+         RETURNING id`,
+        [user.sub, user.email, user.email.split('@')[0], role]
+      );
+      user.dbId = inserted.rows[0]?.id ?? null;
+    } catch (e) {
+      console.error('Auto-create user failed:', e.message);
+      return error(404, 'User profile not found. Please contact support.');
+    }
   }
 
   if (method === 'GET') return getOwnProfile(user);
