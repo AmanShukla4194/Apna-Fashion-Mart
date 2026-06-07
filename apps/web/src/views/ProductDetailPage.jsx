@@ -727,38 +727,55 @@ function normalizeApiProduct(p) {
 export default function ProductDetailPage({ id }) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const [product, setProduct] = React.useState(
-    AFM_DATA.products?.find(p => String(p.id) === String(id)) ?? null
-  );
-  const [loading, setLoading] = React.useState(!product);
+  const seedProduct = AFM_DATA.products?.find(p => String(p.id) === String(id)) ?? null;
+  const [product, setProduct] = React.useState(seedProduct);
+  const [loading, setLoading] = React.useState(!seedProduct);
+  const [fetchError, setFetchError] = React.useState(false);
 
   useEffect(() => {
-    // If it's not a seed data product, fetch from API
-    if (!AFM_DATA.products?.find(p => String(p.id) === String(id))) {
-      setLoading(true);
-      fetch(`${API_URL}/products/${id}`)
-        .then(r => r.ok ? r.json() : null)
-        .then(data => {
-          if (data?.id) setProduct(normalizeApiProduct(data));
-        })
-        .catch(() => {
-          // On error, keep loading=false and product=null — spinner stays until user navigates away
-          setLoading(false);
-        })
-        .finally(() => setLoading(false));
-    }
+    if (seedProduct) return; // already have seed data product
+    setLoading(true);
+    setFetchError(false);
+
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+
+    fetch(`${API_URL}/products/${id}`, { signal: controller.signal })
+      .then(r => r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`)))
+      .then(data => {
+        if (data?.id) setProduct(normalizeApiProduct(data));
+        else setFetchError(true);
+      })
+      .catch(() => setFetchError(true))
+      .finally(() => { clearTimeout(timeout); setLoading(false); });
+
+    return () => { controller.abort(); clearTimeout(timeout); };
   }, [id]);
 
   useEffect(() => {
     if (product) trackView(product.id);
   }, [product?.id]);
 
-  if (loading || !product) {
+  if (loading) {
     return (
       <>
         <Header />
         <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
           <div className="w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
+        </div>
+        <Footer />
+      </>
+    );
+  }
+
+  if (fetchError || !product) {
+    return (
+      <>
+        <Header />
+        <div style={{ minHeight: '60vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16 }}>
+          <p style={{ font: '600 18px Poppins', color: 'var(--navy-800)' }}>Product not found</p>
+          <p style={{ font: '400 14px Poppins', color: 'var(--fg-muted)' }}>This product may have been removed or is unavailable.</p>
+          <button className="afm-btn afm-btn-primary" onClick={() => router.push('/')}>Back to home</button>
         </div>
         <Footer />
       </>
