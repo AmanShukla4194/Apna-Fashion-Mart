@@ -1,3 +1,4 @@
+const crypto = require('crypto');
 const { query, withTransaction } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { ok, error } = require('../response');
@@ -91,7 +92,25 @@ async function getById(user, id) {
 async function create(user, body) {
   if (!user.dbId) return error(401, 'User not found in database');
 
-  const { items, addressId, paymentMethod = 'cod', razorpayOrderId, notes } = body;
+  const {
+    items, addressId, paymentMethod = 'cod',
+    razorpayOrderId, razorpayPaymentId, razorpaySignature,
+    notes,
+  } = body;
+
+  // Verify Razorpay signature for online payments
+  if (paymentMethod === 'razorpay') {
+    if (!razorpayOrderId || !razorpayPaymentId || !razorpaySignature) {
+      return error(400, 'Razorpay payment details required for online payment');
+    }
+    const generated = crypto
+      .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+      .update(`${razorpayOrderId}|${razorpayPaymentId}`)
+      .digest('hex');
+    if (generated !== razorpaySignature) {
+      return error(400, 'Payment verification failed');
+    }
+  }
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return error(400, 'items array is required');
@@ -171,16 +190,18 @@ async function create(user, body) {
     const seqResult = await client.query(`SELECT NEXTVAL('order_number_seq') AS n`);
     const orderNumber = `AFM-${String(seqResult.rows[0].n).padStart(6, '0')}`;
 
+    const payStatus = paymentMethod === 'razorpay' ? 'paid' : 'pending';
+
     const orderResult = await client.query(
       `INSERT INTO orders
          (order_number, user_id, shop_id, address_id, shipping_address,
-          status, payment_status, payment_method, razorpay_order_id,
+          status, payment_status, payment_method, razorpay_order_id, razorpay_payment_id,
           subtotal, delivery_fee, discount, total, notes)
-       VALUES ($1,$2,$3,$4,$5,'pending','pending',$6,$7,$8,$9,$10,$11,$12)
+       VALUES ($1,$2,$3,$4,$5,'pending',$6,$7,$8,$9,$10,$11,$12,$13,$14)
        RETURNING *`,
       [
         orderNumber, user.dbId, shopId, addressId, JSON.stringify(shippingAddress),
-        paymentMethod, razorpayOrderId || null,
+        payStatus, paymentMethod, razorpayOrderId || null, razorpayPaymentId || null,
         subtotal, deliveryFee, discount, total, notes || null,
       ]
     );

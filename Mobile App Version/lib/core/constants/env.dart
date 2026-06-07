@@ -19,7 +19,7 @@ class Env {
   // Third-party keys
   static const razorpayKeyId = String.fromEnvironment(
     'RAZORPAY_KEY_ID',
-    defaultValue: '',
+    defaultValue: 'rzp_live_SyiWZAqZIT1tbS',
   );
   static const googleMapsApiKey = String.fromEnvironment(
     'GOOGLE_MAPS_API_KEY',

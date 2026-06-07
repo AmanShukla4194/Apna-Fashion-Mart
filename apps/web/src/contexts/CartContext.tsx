@@ -6,6 +6,7 @@ export interface CartItem {
   id: string | number;
   name: string;
   store: string;
+  shopId?: string;
   price: number;
   oldPrice?: number;
   qty: number;
@@ -111,14 +112,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     const item: CartItem = {
       id: product.id,
       name: product.name,
-      store: product.store,
+      store: product.store || product.shop_name,
+      shopId: product.shopId || product.shop_id,
       price: product.price,
-      oldPrice: product.oldPrice,
+      oldPrice: product.oldPrice || product.compare_price,
       qty: 1,
       size: size || product.sizes?.[1] || product.sizes?.[0] || 'M',
       color: color || product.colors?.[0] || '#001F3F',
       bg: product.bg,
-      img: product.img,
+      img: product.img || product.images?.[0],
     };
     dispatch({ type: 'ADD', item });
     dispatch({ type: 'OPEN' });

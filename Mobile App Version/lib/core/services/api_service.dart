@@ -214,6 +214,11 @@ class ApiService {
     }
   }
 
+  Future<Map<String, dynamic>> createRazorpayOrder(int amountPaise) async {
+    final response = await _dio.post('/razorpay/create-order', data: {'amount': amountPaise});
+    return _parseMap(response.data) ?? {};
+  }
+
   Future<String> createOrder(Map<String, dynamic> data) async {
     final response = await _dio.post('/orders', data: data);
     final body = _parseMap(response.data);

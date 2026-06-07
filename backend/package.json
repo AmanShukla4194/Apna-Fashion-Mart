@@ -8,11 +8,12 @@
     "build": "zip -r function.zip . -x '*.git*' -x 'node_modules/.bin/*'"
   },
   "dependencies": {
-    "pg": "^8.11.0",
-    "aws-jwt-verify": "^4.0.0",
-    "@aws-sdk/rds-signer": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
-    "@aws-sdk/s3-request-presigner": "^3.0.0"
+    "@aws-sdk/rds-signer": "^3.0.0",
+    "@aws-sdk/s3-request-presigner": "^3.0.0",
+    "aws-jwt-verify": "^4.0.0",
+    "pg": "^8.11.0",
+    "razorpay": "^2.9.6"
   },
   "devDependencies": {
     "@types/pg": "^8.11.0",

@@ -11,6 +11,7 @@ const addresses = require('./src/handlers/addresses');
 const reviews = require('./src/handlers/reviews');
 const categories = require('./src/handlers/categories');
 const uploads = require('./src/handlers/uploads');
+const razorpay = require('./src/handlers/razorpay');
 
 exports.handler = async (event) => {
   const httpMethod = event.httpMethod || event.requestContext?.http?.method || '';
@@ -55,6 +56,7 @@ exports.handler = async (event) => {
     if (path.startsWith('/reviews'))   return await reviews.handle(ctx);
     if (path.startsWith('/categories'))return await categories.handle(ctx);
     if (path.startsWith('/uploads'))   return await uploads.handle(ctx);
+    if (path.startsWith('/razorpay'))  return await razorpay.handle(ctx);
     if (path.startsWith('/profile') || path.startsWith('/users')) return await profile.handle(ctx);
 
     return error(404, 'Not found');

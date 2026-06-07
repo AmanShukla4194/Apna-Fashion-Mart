@@ -62,18 +62,8 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
 
   late final RazorpayService _razorpayService;
 
-  final List<DeliveryAddress> _savedAddresses = const [
-    DeliveryAddress(
-      id: 'addr1', label: 'HOME', fullName: 'Aman Shukla', phone: '+91 98765 43210',
-      line1: 'Flat 4B, Sunrise Apartments', line2: 'MG Road',
-      city: 'New Delhi', state: 'Delhi', pincode: '110001',
-    ),
-    DeliveryAddress(
-      id: 'addr2', label: 'WORK', fullName: 'Aman Shukla', phone: '+91 98765 43210',
-      line1: 'Tower 2, Cyber Hub', line2: 'DLF Phase 2',
-      city: 'Gurugram', state: 'Haryana', pincode: '122002',
-    ),
-  ];
+  List<DeliveryAddress> _savedAddresses = [];
+  bool _loadingAddresses = true;
 
   static const Map<String, double> _offers = {
     'HDFC10': 0.10,
@@ -91,6 +81,33 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
       onError: _onPaymentError,
       onExternalWallet: _onExternalWallet,
     );
+    _fetchAddresses();
+  }
+
+  Future<void> _fetchAddresses() async {
+    try {
+      final list = await ApiService.instance.getAddresses('');
+      if (!mounted) return;
+      setState(() {
+        _savedAddresses = list.map((a) => DeliveryAddress(
+          id: a['id'] as String? ?? '',
+          label: (a['type'] as String? ?? 'home').toUpperCase(),
+          fullName: a['full_name'] as String? ?? '',
+          phone: a['phone'] as String? ?? '',
+          line1: a['line1'] as String? ?? '',
+          line2: a['line2'] as String?,
+          city: a['city'] as String? ?? '',
+          state: a['state'] as String? ?? '',
+          pincode: a['pincode'] as String? ?? '',
+        )).toList();
+        _loadingAddresses = false;
+        if (_savedAddresses.isNotEmpty) {
+          _selectedAddress = _savedAddresses.first;
+        }
+      });
+    } catch (_) {
+      if (mounted) setState(() => _loadingAddresses = false);
+    }
   }
 
   @override
@@ -115,10 +132,32 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
   // Razorpay callbacks
   // ---------------------------------------------------------------------------
 
-  void _onPaymentSuccess(PaymentSuccessResponse response) {
-    final orderId = response.orderId ?? DateTime.now().millisecondsSinceEpoch.toString();
-    ref.read(cartProvider.notifier).clearCart();
-    if (mounted) context.go('/checkout/success/$orderId');
+  void _onPaymentSuccess(PaymentSuccessResponse response) async {
+    try {
+      final cartItems = ref.read(cartProvider);
+      final orderItems = cartItems.map((i) => {
+        'productId': i.productId,
+        'quantity': i.quantity,
+        'size': i.size.isNotEmpty ? i.size : null,
+        'color': i.color.isNotEmpty ? i.color : null,
+      }).toList();
+
+      final orderId = await ApiService.instance.createOrder({
+        'items': orderItems,
+        'addressId': _selectedAddress!.id,
+        'paymentMethod': 'razorpay',
+        'razorpayOrderId': response.orderId,
+        'razorpayPaymentId': response.paymentId,
+        'razorpaySignature': response.signature,
+      });
+
+      ref.read(cartProvider.notifier).clearCart();
+      if (mounted) context.go('/checkout/success/$orderId');
+    } catch (e) {
+      if (mounted) _showError('Payment received but order creation failed. Contact support.');
+    } finally {
+      if (mounted) setState(() => _isPlacingOrder = false);
+    }
   }
 
   void _onPaymentError(PaymentFailureResponse response) {
@@ -534,10 +573,11 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
     setState(() => _isPlacingOrder = true);
     try {
       if (_selectedPayment == PaymentMethod.razorpay) {
-        // Fetch authed user for prefill
+        // Create Razorpay order on backend first
+        final rzpOrder = await ApiService.instance.createRazorpayOrder(_finalTotal * 100);
         _razorpayService.openPayment(
-          amount: _finalTotal * 100, // paise
-          orderId: 'order_${DateTime.now().millisecondsSinceEpoch}',
+          amount: _finalTotal * 100,
+          orderId: rzpOrder['id'] as String,
           name: _selectedAddress!.fullName,
           email: 'user@apnafashionmart.in',
           phone: _selectedAddress!.phone.replaceAll(RegExp(r'[^0-9]'), ''),
@@ -545,12 +585,19 @@ class _CheckoutScreenState extends ConsumerState<CheckoutScreen> {
         );
         // Result handled in _onPaymentSuccess / _onPaymentError
       } else {
+        // COD — create order directly in DB
+        final cartItems = ref.read(cartProvider);
+        final orderItems = cartItems.map((i) => {
+          'productId': i.productId,
+          'quantity': i.quantity,
+          'size': i.size.isNotEmpty ? i.size : null,
+          'color': i.color.isNotEmpty ? i.color : null,
+        }).toList();
+
         final orderId = await ApiService.instance.createOrder({
-          'total_amount': _finalTotal,
-          'payment_method': _selectedPayment.name,
-          'delivery_address': _selectedAddress!.formatted,
-          'status': 'confirmed',
-          'created_at': DateTime.now().toIso8601String(),
+          'items': orderItems,
+          'addressId': _selectedAddress!.id,
+          'paymentMethod': 'cod',
         });
         ref.read(cartProvider.notifier).clearCart();
         if (mounted) context.go('/checkout/success/$orderId');
