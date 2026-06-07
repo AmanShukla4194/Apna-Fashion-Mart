@@ -702,21 +702,73 @@ function ProductView({ product, onAddToCart, onProductClick }) {
 
 
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+function normalizeApiProduct(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    store: p.shop_name || 'Local Boutique',
+    shopId: p.shop_id,
+    price: p.price,
+    oldPrice: p.compare_price || null,
+    img: p.images?.[0] || null,
+    bg: 'linear-gradient(135deg, #FFE4F0 0%, #FFF0F7 100%)',
+    rating: parseFloat(p.avg_rating) || 0,
+    badges: [],
+    colors: p.colors?.length > 0 ? p.colors : ['#001F3F', '#FF1493', '#C9A24A', '#000000'],
+    sizes: p.sizes?.length > 0 ? p.sizes : ['XS', 'S', 'M', 'L', 'XL'],
+    description: p.description || '',
+    tags: p.tags || [],
+    is3d: false,
+  };
+}
+
 export default function ProductDetailPage({ id }) {
   const router = useRouter();
   const { addToCart } = useCart();
-  const product = AFM_DATA.products?.find(p => String(p.id) === String(id)) ?? AFM_DATA.products?.[0] ?? null;
+  const [product, setProduct] = React.useState(
+    AFM_DATA.products?.find(p => String(p.id) === String(id)) ?? null
+  );
+  const [loading, setLoading] = React.useState(!product);
+
+  useEffect(() => {
+    // If it's not a seed data product, fetch from API
+    if (!AFM_DATA.products?.find(p => String(p.id) === String(id))) {
+      setLoading(true);
+      fetch(`${API_URL}/products/${id}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (data) setProduct(normalizeApiProduct(data));
+          else setProduct(AFM_DATA.products?.[0] ?? null);
+        })
+        .catch(() => setProduct(AFM_DATA.products?.[0] ?? null))
+        .finally(() => setLoading(false));
+    }
+  }, [id]);
 
   useEffect(() => {
     if (product) trackView(product.id);
   }, [product?.id]);
+
+  if (loading) {
+    return (
+      <>
+        <Header />
+        <div style={{ minHeight: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <div className="w-12 h-12 border-4 border-secondary border-t-transparent rounded-full animate-spin" />
+        </div>
+        <Footer />
+      </>
+    );
+  }
 
   return (
     <>
       <Header />
       <ProductView
         product={product}
-        onAddToCart={addToCart}
+        onAddToCart={(p, size, color) => addToCart({ ...p, shop_id: p.shopId }, size, color)}
         onProductClick={(pid) => router.push('/product/' + pid)}
       />
       <Footer />
