@@ -12,6 +12,7 @@ abstract class AppConstants {
   static const becomeASellerUrl = 'https://apnafashionmart.com/become-a-seller';
   static const vendorAgreementUrl = 'https://apnafashionmart.com/legal/vendor';
   static const nearbyShopsApiUrl = 'https://apnafashionmart.com/api/nearby-shops';
+  static const apiBaseUrl = 'https://709m6g0t8a.execute-api.ap-south-1.amazonaws.com';
 
   // API resource / table names (used as path segments in REST calls)
   static const tableProducts = 'products';

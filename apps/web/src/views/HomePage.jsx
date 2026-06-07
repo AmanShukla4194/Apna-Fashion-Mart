@@ -22,10 +22,14 @@ function AfmButton({ variant='primary', size, children, onClick, className='' })
 
 
 
-function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishlist, onCategoryClick }) {
+function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishlist, onCategoryClick, apiProducts = [], apiShops = [] }) {
   const { boutiques, products, trust, cities, categories, howItWorks, testimonials, appFeatures } = AFM_DATA;
   const [appToast, setAppToast] = React.useState(false);
   const showAppToast = (e) => { e.preventDefault(); setAppToast(true); setTimeout(() => setAppToast(false), 3000); };
+
+  // Use real API data when available, fall back to seed data
+  const displayProducts = apiProducts.length > 0 ? apiProducts : products;
+  const displayShops = apiShops.length > 0 ? apiShops : boutiques;
 
   return (
     <>
@@ -90,7 +94,7 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
             <div className="stat-num"><em>1,247</em></div>
             <div className="stat-label">Boutiques verified in your city</div>
             <div className="avatars">
-              {boutiques.slice(0,4).map(b => (
+              {displayShops.slice(0,4).map(b => (
                 <div key={b.id} className="avatar" style={{ background: b.bg }}>{b.initial.charAt(0)}</div>
               ))}
               <div className="avatar" style={{ background: 'rgba(255,255,255,0.06)', fontSize: 11, letterSpacing: '0.02em' }}>+1.2k</div>
@@ -163,7 +167,7 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
           </div>
 
           <div className="featured-grid stagger">
-            {boutiques.map(b => (
+            {displayShops.map(b => (
               <article key={b.id} className={`boutique-card reveal ${b.verified ? 'gold' : ''}`} onClick={() => setView('product')}>
                 <div className="boutique-cover" style={{ backgroundImage: `url(${b.img}), ${b.bg}` }}>
                   <span className="boutique-dist"><MapPin size={11}/>{b.distance}</span>
@@ -231,7 +235,7 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
           </div>
 
           <div className="product-grid">
-            {products.slice(0,8).map(p => {
+            {displayProducts.slice(0,8).map(p => {
               const disc = p.oldPrice ? Math.round((1 - p.price / p.oldPrice) * 100) : 0;
               return (
                 <article key={p.id} className="product-card reveal" onClick={() => onProductClick(p)}>
@@ -448,10 +452,67 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
 
 
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
+
+function normalizeProduct(p) {
+  return {
+    id: p.id,
+    name: p.name,
+    store: p.shop_name || 'Local Boutique',
+    price: p.price,
+    oldPrice: p.compare_price || null,
+    img: p.images?.[0] || null,
+    bg: 'linear-gradient(135deg, #FFE4F0 0%, #FFF0F7 100%)',
+    rating: parseFloat(p.avg_rating) || 0,
+    badges: [],
+    colors: p.colors || ['#001F3F'],
+    sizes: p.sizes || [],
+    is3d: false,
+  };
+}
+
+function normalizeShop(s) {
+  return {
+    id: s.id,
+    name: s.name,
+    img: s.logo_url || null,
+    bg: 'linear-gradient(135deg, #FFE4F0 0%, #FFF0F7 100%)',
+    verified: s.is_verified || false,
+    distance: s.distance_km ? `${s.distance_km} km` : '',
+    area: s.city || '',
+    tags: Array.isArray(s.tags) ? s.tags : [],
+    rating: parseFloat(s.avg_rating) || 0,
+    reviews: s.review_count || 0,
+  };
+}
+
 export default function HomePage() {
   const router = useRouter();
   const { addToCart } = useCart();
   const [wishlist, setWishlist] = React.useState(new Set());
+  const [apiProducts, setApiProducts] = React.useState([]);
+  const [apiShops, setApiShops] = React.useState([]);
+
+  React.useEffect(() => {
+    // Fetch real products from DB
+    fetch(`${API_URL}/products?limit=8`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const list = data?.products || [];
+        if (list.length > 0) setApiProducts(list.map(normalizeProduct));
+      })
+      .catch(() => {});
+
+    // Fetch real shops from DB
+    fetch(`${API_URL}/shops?limit=8`)
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const list = data?.shops || [];
+        if (list.length > 0) setApiShops(list.map(normalizeShop));
+      })
+      .catch(() => {});
+  }, []);
+
   const toggleWishlist = (id) => setWishlist(prev => {
     const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s;
   });
@@ -459,11 +520,13 @@ export default function HomePage() {
   return (
     <HomeView
       setView={nav}
-      onProductClick={(id) => router.push('/product/' + id)}
+      onProductClick={(p) => router.push('/product/' + (p?.id || p))}
       onAddToCart={addToCart}
       wishlist={wishlist}
       toggleWishlist={toggleWishlist}
       onCategoryClick={(cat) => router.push('/categories?cat=' + encodeURIComponent(cat))}
+      apiProducts={apiProducts}
+      apiShops={apiShops}
     />
   );
 }

@@ -14,6 +14,7 @@ const uploads = require('./src/handlers/uploads');
 
 exports.handler = async (event) => {
   const httpMethod = event.httpMethod || event.requestContext?.http?.method || '';
+  if (httpMethod === 'OPTIONS') return optionsResponse();
 
   const authHeader = event.headers?.Authorization || event.headers?.authorization;
   const jwtUser = await verifyToken(authHeader);

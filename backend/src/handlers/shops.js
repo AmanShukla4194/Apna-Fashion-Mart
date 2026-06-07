@@ -11,7 +11,7 @@ const SHOP_COLS = `
   s.phone, s.email, s.address_line1, s.address_line2,
   s.city, s.state, s.pincode, s.tags, s.opening_hours,
   s.status, s.is_verified, s.avg_rating, s.review_count, s.product_count,
-  s.vendor_id, s.category_id, c.name AS category_name, s.created_at,
+  s.vendor_id, s.created_at,
   ST_X(s.location::geometry) AS longitude,
   ST_Y(s.location::geometry) AS latitude
 `;
@@ -62,8 +62,7 @@ async function list(params) {
 
   const sql = `
     SELECT ${SHOP_COLS} FROM shops s
-    LEFT JOIN categories c ON c.id = s.category_id
-    ${where}
+        ${where}
     ORDER BY s.avg_rating DESC NULLS LAST, s.created_at DESC
     LIMIT $${idx++} OFFSET $${idx}
   `;
@@ -79,8 +78,7 @@ async function list(params) {
 async function getFeatured() {
   const sql = `
     SELECT ${SHOP_COLS} FROM shops s
-    LEFT JOIN categories c ON c.id = s.category_id
-    WHERE s.status = 'active' AND s.is_verified = true
+        WHERE s.status = 'active' AND s.is_verified = true
     ORDER BY s.avg_rating DESC NULLS LAST LIMIT 20
   `;
   return ok({ shops: (await query(sql)).rows });
@@ -89,8 +87,7 @@ async function getFeatured() {
 async function getMyShop(user) {
   const result = await query(
     `SELECT ${SHOP_COLS} FROM shops s
-     LEFT JOIN categories c ON c.id = s.category_id
-     WHERE s.vendor_id = $1 AND s.status != 'closed'
+          WHERE s.vendor_id = $1 AND s.status != 'closed'
      ORDER BY s.created_at DESC LIMIT 1`,
     [user.dbId]
   );
@@ -112,8 +109,7 @@ async function getNearby(params) {
         (ST_Distance(s.location::geography, ST_MakePoint($2, $1)::geography) / 1000.0)::NUMERIC,
         2
       ) AS distance_km
-    FROM shops s LEFT JOIN categories c ON c.id = s.category_id
-    WHERE s.status = 'active'
+    FROM shops s     WHERE s.status = 'active'
       AND s.location IS NOT NULL
       AND ST_DWithin(s.location::geography, ST_MakePoint($2, $1)::geography, $3 * 1000)
     ORDER BY ST_Distance(s.location::geography, ST_MakePoint($2, $1)::geography) ASC
@@ -152,7 +148,7 @@ async function create(user, body) {
   const {
     name, description, logo_url, banner_url, phone, email,
     address_line1, address_line2, city, state, pincode,
-    category_id, latitude, longitude, opening_hours, tags = [],
+    latitude, longitude, opening_hours, tags = [],
   } = body;
 
   if (!name || !city) return error(400, 'name and city are required');
@@ -166,22 +162,22 @@ async function create(user, body) {
   const baseValues = [
     user.dbId, name, slug, description || null, logo_url || null, banner_url || null,
     phone || null, email || null, address_line1 || null, address_line2 || null,
-    city, state || null, pincode || null, category_id || null,
+    city, state || null, pincode || null,
     tags, opening_hours ? JSON.stringify(opening_hours) : null,
   ];
 
   const sql = hasLocation
     ? `INSERT INTO shops
          (vendor_id, name, slug, description, logo_url, banner_url, phone, email,
-          address_line1, address_line2, city, state, pincode, category_id,
+          address_line1, address_line2, city, state, pincode,
           tags, opening_hours, location, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,
-         ST_SetSRID(ST_MakePoint($17, $18), 4326), 'pending') RETURNING *`
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
+         ST_SetSRID(ST_MakePoint($16, $17), 4326), 'pending') RETURNING *`
     : `INSERT INTO shops
          (vendor_id, name, slug, description, logo_url, banner_url, phone, email,
-          address_line1, address_line2, city, state, pincode, category_id,
+          address_line1, address_line2, city, state, pincode,
           tags, opening_hours, status)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16, 'pending') RETURNING *`;
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, 'pending') RETURNING *`;
 
   const values = hasLocation
     ? [...baseValues, parseFloat(longitude), parseFloat(latitude)]
@@ -199,7 +195,7 @@ async function update(user, id, body) {
 
   const allowed = [
     'name', 'description', 'logo_url', 'banner_url', 'phone', 'email',
-    'address_line1', 'address_line2', 'city', 'state', 'pincode', 'category_id', 'tags',
+    'address_line1', 'address_line2', 'city', 'state', 'pincode', 'tags',
   ];
   const setClauses = [];
   const values = [];

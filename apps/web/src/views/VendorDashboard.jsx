@@ -285,7 +285,7 @@ const VendorDashboard = () => {
                               <td className="py-3 capitalize">{p.category}</td>
                               <td className="py-3 font-medium">₹{p.price}</td>
                               <td className="py-3">
-                                <Badge variant={p.stock > 10 ? 'outline' : 'destructive'} className="font-normal">{p.stock} units</Badge>
+                                <Badge variant={(p.stock_quantity ?? p.stock ?? 0) > 10 ? 'outline' : 'destructive'} className="font-normal">{p.stock_quantity ?? p.stock ?? 0} units</Badge>
                               </td>
                               <td className="py-3">
                                 <div className="flex gap-1">

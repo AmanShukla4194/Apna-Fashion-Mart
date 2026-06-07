@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:dio/dio.dart';
 import 'package:apna_fashion_mart/core/providers/cart_provider.dart';
+import 'package:apna_fashion_mart/core/constants/app_constants.dart';
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -29,21 +30,25 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   static const Color _neutral100 = Color(0xFFF1F3F6);
   static const Color _neutral500 = Color(0xFF6B7280);
 
-  static const List<Map<String, dynamic>> _mockProducts = [
-    {'id': '1', 'name': 'Banarasi Silk Saree', 'store': 'Aanya Atelier', 'price': 4899, 'oldPrice': 6200, 'rating': 4.8, 'distance': '1.4 km'},
-    {'id': '2', 'name': 'Anarkali Suit Set', 'store': 'Riya Collections', 'price': 2199, 'rating': 4.6, 'distance': '2.1 km'},
-    {'id': '3', 'name': 'Embroidered Lehenga', 'store': 'Mira Weaves', 'price': 8499, 'oldPrice': 11000, 'rating': 4.9, 'distance': '0.9 km'},
-    {'id': '4', 'name': 'Cotton Kurti Combo', 'store': 'Rang Studio', 'price': 1299, 'rating': 4.4, 'distance': '3.2 km'},
-    {'id': '5', 'name': 'Chanderi Dupatta', 'store': 'Weaves & Co', 'price': 899, 'rating': 4.7, 'distance': '1.8 km'},
-    {'id': '6', 'name': 'Silk Coord Set', 'store': 'Studio Ekta', 'price': 3299, 'oldPrice': 4500, 'rating': 4.5, 'distance': '2.8 km'},
+  // Fallback data shown while API loads or if API has no results yet
+  static const List<Map<String, dynamic>> _fallbackProducts = [
+    {'id': '1', 'name': 'Banarasi Silk Saree', 'store': 'Aanya Atelier', 'price': 4899, 'oldPrice': 6200, 'rating': 4.8},
+    {'id': '2', 'name': 'Anarkali Suit Set', 'store': 'Riya Collections', 'price': 2199, 'rating': 4.6},
+    {'id': '3', 'name': 'Embroidered Lehenga', 'store': 'Mira Weaves', 'price': 8499, 'oldPrice': 11000, 'rating': 4.9},
+    {'id': '4', 'name': 'Cotton Kurti Combo', 'store': 'Rang Studio', 'price': 1299, 'rating': 4.4},
+    {'id': '5', 'name': 'Chanderi Dupatta', 'store': 'Weaves & Co', 'price': 899, 'rating': 4.7},
+    {'id': '6', 'name': 'Silk Coord Set', 'store': 'Studio Ekta', 'price': 3299, 'oldPrice': 4500, 'rating': 4.5},
   ];
 
-  static const List<Map<String, dynamic>> _mockShops = [
-    {'id': 's1', 'name': 'Aanya Atelier', 'rating': 4.8, 'distance': '1.4 km', 'tags': ['Sarees', 'Bridal'], 'reviews': 214},
-    {'id': 's2', 'name': 'Riya Collections', 'rating': 4.6, 'distance': '2.1 km', 'tags': ['Suits', 'Ethnic'], 'reviews': 187},
-    {'id': 's3', 'name': 'Mira Weaves', 'rating': 4.9, 'distance': '0.9 km', 'tags': ['Lehengas', 'Handloom'], 'reviews': 302},
-    {'id': 's4', 'name': 'Studio Ekta', 'rating': 4.5, 'distance': '2.8 km', 'tags': ['Western', 'Casual'], 'reviews': 156},
+  static const List<Map<String, dynamic>> _fallbackShops = [
+    {'id': 's1', 'name': 'Aanya Atelier', 'rating': 4.8, 'tags': ['Sarees', 'Bridal'], 'reviews': 214},
+    {'id': 's2', 'name': 'Riya Collections', 'rating': 4.6, 'tags': ['Suits', 'Ethnic'], 'reviews': 187},
+    {'id': 's3', 'name': 'Mira Weaves', 'rating': 4.9, 'tags': ['Lehengas', 'Handloom'], 'reviews': 302},
+    {'id': 's4', 'name': 'Studio Ekta', 'rating': 4.5, 'tags': ['Western', 'Casual'], 'reviews': 156},
   ];
+
+  List<Map<String, dynamic>> _products = List.from(_fallbackProducts);
+  List<Map<String, dynamic>> _shops = List.from(_fallbackShops);
 
   static const List<Map<String, String>> _categories = [
     {'label': 'Sarees', 'icon': '🥻'},
@@ -88,6 +93,51 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     _startBannerAutoPlay();
     _startFlashSaleTimer();
     _fetchLocation();
+    _fetchHomeData();
+  }
+
+  Future<void> _fetchHomeData() async {
+    try {
+      final dio = Dio();
+      final results = await Future.wait([
+        dio.get('${AppConstants.apiBaseUrl}/products?limit=8'),
+        dio.get('${AppConstants.apiBaseUrl}/shops?limit=6'),
+      ]);
+
+      final productsData = results[0].data;
+      final shopsData = results[1].data;
+
+      final List rawProducts = productsData['products'] ?? [];
+      final List rawShops = shopsData['shops'] ?? [];
+
+      if (!mounted) return;
+      setState(() {
+        if (rawProducts.isNotEmpty) {
+          _products = rawProducts.map<Map<String, dynamic>>((p) => {
+            'id': p['id'] ?? '',
+            'name': p['name'] ?? '',
+            'store': p['shop_name'] ?? 'Local Boutique',
+            'price': p['price'] ?? 0,
+            'oldPrice': p['compare_price'],
+            'rating': double.tryParse(p['avg_rating']?.toString() ?? '0') ?? 0.0,
+            'image': (p['images'] as List?)?.isNotEmpty == true ? p['images'][0] : null,
+          }).toList();
+        }
+        if (rawShops.isNotEmpty) {
+          _shops = rawShops.map<Map<String, dynamic>>((s) => {
+            'id': s['id'] ?? '',
+            'name': s['name'] ?? '',
+            'rating': double.tryParse(s['avg_rating']?.toString() ?? '0') ?? 0.0,
+            'tags': List<String>.from(s['tags'] ?? []),
+            'reviews': s['review_count'] ?? 0,
+            'logoUrl': s['logo_url'],
+            'city': s['city'] ?? '',
+          }).toList();
+        }
+      });
+    } catch (_) {
+      // Keep fallback data on error
+    }
   }
 
   Future<void> _fetchLocation() async {
@@ -619,7 +669,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 12),
             itemCount: 4,
             itemBuilder: (context, index) {
-              final product = _mockProducts[index];
+              final product = _products[index];
               return _buildFlashProductCard(product);
             },
           ),
@@ -792,9 +842,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               crossAxisSpacing: 8,
               childAspectRatio: 0.72,
             ),
-            itemCount: _mockProducts.length,
+            itemCount: _products.length,
             itemBuilder: (context, index) {
-              return _buildProductGridCard(_mockProducts[index]);
+              return _buildProductGridCard(_products[index]);
             },
           ),
         ),
@@ -1000,9 +1050,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: _mockShops.length,
+            itemCount: _shops.length,
             itemBuilder: (context, index) {
-              return _buildShopCard(_mockShops[index]);
+              return _buildShopCard(_shops[index]);
             },
           ),
         ),
