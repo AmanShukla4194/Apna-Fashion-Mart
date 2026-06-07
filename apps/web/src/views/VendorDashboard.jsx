@@ -407,7 +407,7 @@ const VendorDashboard = () => {
 
       {/* Product Add/Edit Modal */}
       {showProductModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
               <h2 className="text-xl font-bold text-primary font-serif">{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
@@ -462,7 +462,7 @@ const VendorDashboard = () => {
 
       {/* Store Setup Modal */}
       {showStoreSetup && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+        <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-black/60 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b flex justify-between items-center">
               <h2 className="text-xl font-bold text-primary font-serif">Setup Your Store</h2>

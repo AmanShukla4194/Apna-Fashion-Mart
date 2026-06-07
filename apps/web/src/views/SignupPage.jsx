@@ -153,7 +153,7 @@ const SignupPage = () => {
                   <SelectTrigger className="rounded-xl h-11">
                     <SelectValue />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="z-[9999]">
                     <SelectItem value="customer">Customer — I want to shop</SelectItem>
                     <SelectItem value="vendor">Vendor — I own a clothing store</SelectItem>
                   </SelectContent>
