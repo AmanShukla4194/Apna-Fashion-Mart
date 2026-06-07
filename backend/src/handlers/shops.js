@@ -21,6 +21,10 @@ async function handle(ctx) {
 
   if (method === 'GET' && path.endsWith('/shops/featured')) return getFeatured();
   if (method === 'GET' && path.endsWith('/shops/nearby'))   return getNearby(queryParams);
+  if (method === 'GET' && path.endsWith('/shops/mine')) {
+    requireRole(user, 'vendor', 'admin');
+    return getMyShop(user);
+  }
   if (method === 'GET' && pathParams.id)                    return getById(pathParams.id);
   if (method === 'GET')                                     return list(queryParams);
 
@@ -80,6 +84,17 @@ async function getFeatured() {
     ORDER BY s.avg_rating DESC NULLS LAST LIMIT 20
   `;
   return ok({ shops: (await query(sql)).rows });
+}
+
+async function getMyShop(user) {
+  const result = await query(
+    `SELECT ${SHOP_COLS} FROM shops s
+     LEFT JOIN categories c ON c.id = s.category_id
+     WHERE s.vendor_id = $1 AND s.status != 'closed'
+     ORDER BY s.created_at DESC LIMIT 1`,
+    [user.dbId]
+  );
+  return ok(result.rows[0] || null);
 }
 
 async function getNearby(params) {

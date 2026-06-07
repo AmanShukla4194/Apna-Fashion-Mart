@@ -263,9 +263,9 @@ export async function searchShops(query: string, filters: Record<string, unknown
   return apiRequest<Store[]>(`/shops/search?${params}`);
 }
 
-export async function getVendorStore(vendorId: string): Promise<Store | null> {
+export async function getVendorStore(): Promise<Store | null> {
   try {
-    return await apiRequest<Store>(`/shops?vendorId=${vendorId}`);
+    return await apiRequest<Store>('/shops/mine');
   } catch {
     return null;
   }

@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { getVendorStore, getProductsByVendor, getVendorOrders, getStoreInquiries } from '@/lib/api';
+import { getVendorStore, getProductsByVendor, getVendorOrders, getStoreInquiries, createStore, createProduct, updateProduct, deleteProduct } from '@/lib/api';
 
 const CATEGORIES = ['ethnic', 'women', 'men', 'kids', 'streetwear', 'footwear', 'accessories'];
 
@@ -37,6 +37,7 @@ const VendorDashboard = () => {
   // Store setup modal state
   const [showStoreSetup, setShowStoreSetup] = useState(false);
   const [storeForm, setStoreForm] = useState({ name: '', description: '', city: '', address: '', phone: '' });
+  const [savingStore, setSavingStore] = useState(false);
 
   useEffect(() => {
     if (currentUser) fetchVendorData();
@@ -44,7 +45,7 @@ const VendorDashboard = () => {
 
   const fetchVendorData = async () => {
     try {
-      const storeData = await getVendorStore(currentUser.id);
+      const storeData = await getVendorStore();
       if (storeData) {
         setStore(storeData);
         const [productsData, ordersData, inquiriesData] = await Promise.all([
@@ -85,37 +86,45 @@ const VendorDashboard = () => {
 
   const handleSaveProduct = async () => {
     if (!productForm.name || !productForm.price) { toast.error('Name and price are required'); return; }
+    if (!store) { toast.error('Set up your store first'); return; }
     setSaving(true);
     try {
+      const payload = {
+        name: productForm.name,
+        description: productForm.description,
+        category: productForm.category,
+        price: Number(productForm.price),
+        compare_price: Number(productForm.oldPrice) || undefined,
+        stock_quantity: Number(productForm.stock) || 0,
+        sizes: productForm.sizes ? productForm.sizes.split(',').map(s => s.trim()).filter(Boolean) : [],
+        shop_id: store.id,
+      };
       if (editingProduct) {
-        setProducts(prev => prev.map(p => p.id === editingProduct.id
-          ? { ...p, ...productForm, price: Number(productForm.price), stock: Number(productForm.stock) }
-          : p));
+        const updated = await updateProduct(editingProduct.id, payload);
+        setProducts(prev => prev.map(p => p.id === editingProduct.id ? { ...p, ...updated } : p));
         toast.success('Product updated');
       } else {
-        const newProd = {
-          id: `temp-${Date.now()}`,
-          ...productForm,
-          price: Number(productForm.price),
-          oldPrice: Number(productForm.oldPrice) || 0,
-          stock: Number(productForm.stock) || 0,
-          images: [],
-        };
-        setProducts(prev => [...prev, newProd]);
+        const created = await createProduct(payload);
+        setProducts(prev => [...prev, created]);
         toast.success('Product added');
       }
       setShowProductModal(false);
       setEditingProduct(null);
-    } catch {
-      toast.error('Failed to save product');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save product');
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDeleteProduct = (productId) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
-    toast.success('Product removed');
+  const handleDeleteProduct = async (productId) => {
+    try {
+      await deleteProduct(productId);
+      setProducts(prev => prev.filter(p => p.id !== productId));
+      toast.success('Product removed');
+    } catch {
+      toast.error('Failed to delete product');
+    }
   };
 
   const totalRevenue = orders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.total ?? 0), 0);
@@ -489,14 +498,30 @@ const VendorDashboard = () => {
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowStoreSetup(false)} className="flex-1 border border-border rounded-full py-2 text-sm font-medium hover:bg-muted/30 transition-colors">Cancel</button>
                 <button
-                  onClick={() => {
+                  disabled={savingStore}
+                  onClick={async () => {
                     if (!storeForm.name || !storeForm.city) { toast.error('Name and city are required'); return; }
-                    toast.success("Store application submitted! We'll verify within 48 hrs.");
-                    setShowStoreSetup(false);
+                    setSavingStore(true);
+                    try {
+                      const newStore = await createStore({
+                        name: storeForm.name,
+                        description: storeForm.description || undefined,
+                        city: storeForm.city,
+                        address_line1: storeForm.address || undefined,
+                        phone: storeForm.phone || undefined,
+                      });
+                      setStore(newStore);
+                      setShowStoreSetup(false);
+                      toast.success("Store created! Our team will verify it within 48 hrs.");
+                    } catch (err) {
+                      toast.error(err.message || 'Failed to create store. Please try again.');
+                    } finally {
+                      setSavingStore(false);
+                    }
                   }}
-                  className="flex-1 bg-secondary text-white rounded-full py-2 text-sm font-semibold hover:bg-secondary/90 transition-colors"
+                  className="flex-1 bg-secondary text-white rounded-full py-2 text-sm font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-60"
                 >
-                  Submit Application
+                  {savingStore ? 'Submitting…' : 'Submit Application'}
                 </button>
               </div>
             </div>
