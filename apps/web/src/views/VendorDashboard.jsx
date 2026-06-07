@@ -15,7 +15,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { getVendorStore, getProductsByVendor, getVendorOrders, getStoreInquiries, createStore, createProduct, updateProduct, deleteProduct } from '@/lib/api';
+import { getVendorStore, createStore, createProduct, updateProduct, deleteProduct } from '@/lib/api';
+import { apiRequest } from '@/lib/aws/config';
 
 const CATEGORIES = ['ethnic', 'women', 'men', 'kids', 'streetwear', 'footwear', 'accessories'];
 
@@ -48,14 +49,12 @@ const VendorDashboard = () => {
       const storeData = await getVendorStore();
       if (storeData) {
         setStore(storeData);
-        const [productsData, ordersData, inquiriesData] = await Promise.all([
-          getProductsByVendor(currentUser.id),
-          getVendorOrders(storeData.id),
-          getStoreInquiries(storeData.id),
+        const [productsRes, ordersRes] = await Promise.all([
+          apiRequest(`/products?shop=${storeData.id}&limit=100`),
+          apiRequest('/orders'),
         ]);
-        setProducts(productsData);
-        setOrders(ordersData);
-        setInquiries(inquiriesData);
+        setProducts(productsRes?.products || []);
+        setOrders(ordersRes?.orders || []);
       }
     } catch {
       toast.error('Failed to load dashboard data');
