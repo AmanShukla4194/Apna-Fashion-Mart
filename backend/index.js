@@ -36,8 +36,19 @@ exports.handler = async (event) => {
   // HTTP API (v2) uses requestContext.http.method; REST API (v1) uses httpMethod
   const method = event.httpMethod || event.requestContext?.http?.method || 'GET';
   const path   = event.rawPath || event.path || '';
-  const pathParams  = event.pathParameters || {};
+  const pathParams  = { ...(event.pathParameters || {}) };
   const queryParams = event.queryStringParameters || {};
+
+  // Extract path ID for catch-all $default routes where pathParameters is empty
+  if (!pathParams.id) {
+    const segments = path.split('/').filter(Boolean);
+    if (segments.length >= 2) {
+      const last = segments[segments.length - 1];
+      const knownSubs = ['featured','nearby','mine','status','search',
+                         'create-order','verify','razorpay-create','items'];
+      if (!knownSubs.includes(last)) pathParams.id = last;
+    }
+  }
   let body = {};
 
   if (event.body) {
