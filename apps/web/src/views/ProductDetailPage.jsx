@@ -739,10 +739,12 @@ export default function ProductDetailPage({ id }) {
       fetch(`${API_URL}/products/${id}`)
         .then(r => r.ok ? r.json() : null)
         .then(data => {
-          if (data) setProduct(normalizeApiProduct(data));
-          else setProduct(AFM_DATA.products?.[0] ?? null);
+          if (data?.id) setProduct(normalizeApiProduct(data));
         })
-        .catch(() => setProduct(AFM_DATA.products?.[0] ?? null))
+        .catch(() => {
+          // On error, keep loading=false and product=null — spinner stays until user navigates away
+          setLoading(false);
+        })
         .finally(() => setLoading(false));
     }
   }, [id]);
@@ -751,7 +753,7 @@ export default function ProductDetailPage({ id }) {
     if (product) trackView(product.id);
   }, [product?.id]);
 
-  if (loading) {
+  if (loading || !product) {
     return (
       <>
         <Header />
