@@ -7,14 +7,25 @@ import {
   Heart, Layers, MapPin, Menu, Search, ShieldCheck, ShoppingBag, Store, User, X,
 } from 'lucide-react';
 import { useCart } from '@/contexts/CartContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function Header({ view, setView }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [locationLabel, setLocationLabel] = useState('Detecting location…');
+  const [profileOpen, setProfileOpen] = useState(false);
   const { cartCount, openCart } = useCart();
+  const { currentUser, isAuthenticated, isVendor, logout } = useAuth();
   const router = useRouter();
   const go = (v) => { setView?.(v); setMenuOpen(false); };
+
+  const handleSignOut = async () => {
+    await logout();
+    setProfileOpen(false);
+    router.push('/');
+  };
+
+  const userInitial = currentUser?.name?.charAt(0)?.toUpperCase() || currentUser?.email?.charAt(0)?.toUpperCase() || 'U';
 
   // Hide AI FAB and lock body scroll when mobile menu is open
   useEffect(() => {
@@ -105,9 +116,41 @@ export default function Header({ view, setView }) {
             </button>
           </nav>
 
-          <div className="afm-account">
-            <Link href="/login" className="afm-btn afm-btn-ghost">Customer Login</Link>
-            <Link href="/shop-login" className="afm-btn afm-btn-primary">Shop Owner Login</Link>
+          <div className="afm-account" style={{ position: 'relative' }}>
+            {isAuthenticated ? (
+              <>
+                <button
+                  onClick={() => setProfileOpen(o => !o)}
+                  style={{ width: 40, height: 40, borderRadius: '50%', background: 'var(--magenta-600)', color: '#fff', border: 'none', cursor: 'pointer', font: '600 16px Poppins', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  aria-label="My account"
+                >
+                  {userInitial}
+                </button>
+                {profileOpen && (
+                  <>
+                    <div onClick={() => setProfileOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 299 }} />
+                    <div style={{ position: 'absolute', right: 0, top: 48, background: '#fff', borderRadius: 14, boxShadow: '0 8px 32px rgba(0,0,0,0.14)', minWidth: 200, zIndex: 300, overflow: 'hidden', border: '1px solid var(--border)' }}>
+                      <div style={{ padding: '14px 16px', borderBottom: '1px solid var(--border)' }}>
+                        <div style={{ font: '600 14px Poppins', color: 'var(--navy-800)' }}>{currentUser?.name || currentUser?.email?.split('@')[0]}</div>
+                        <div style={{ font: '400 12px Poppins', color: 'var(--fg-muted)', marginTop: 2 }}>{currentUser?.email}</div>
+                      </div>
+                      {isVendor ? (
+                        <Link href="/vendor-dashboard" onClick={() => setProfileOpen(false)} style={{ display: 'block', padding: '11px 16px', font: '500 13px Poppins', color: 'var(--navy-800)', textDecoration: 'none' }} className="hover:bg-muted/40">My Dashboard</Link>
+                      ) : (
+                        <Link href="/account" onClick={() => setProfileOpen(false)} style={{ display: 'block', padding: '11px 16px', font: '500 13px Poppins', color: 'var(--navy-800)', textDecoration: 'none' }} className="hover:bg-muted/40">My Account</Link>
+                      )}
+                      <Link href="/wishlist" onClick={() => setProfileOpen(false)} style={{ display: 'block', padding: '11px 16px', font: '500 13px Poppins', color: 'var(--navy-800)', textDecoration: 'none' }} className="hover:bg-muted/40">Wishlist</Link>
+                      <button onClick={handleSignOut} style={{ display: 'block', width: '100%', textAlign: 'left', padding: '11px 16px', font: '500 13px Poppins', color: '#dc2626', background: 'none', border: 'none', cursor: 'pointer', borderTop: '1px solid var(--border)' }}>Sign out</button>
+                    </div>
+                  </>
+                )}
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="afm-btn afm-btn-ghost">Customer Login</Link>
+                <Link href="/shop-login" className="afm-btn afm-btn-primary">Shop Owner Login</Link>
+              </>
+            )}
           </div>
 
           <button className="afm-mobile-toggle" aria-label="Open menu" onClick={() => setMenuOpen(true)}>
@@ -138,8 +181,19 @@ export default function Header({ view, setView }) {
           <Link className="item" href="/legal/privacy">Privacy</Link>
           <Link className="item" href="/legal/terms">Terms</Link>
           <div className="actions">
-            <Link href="/login" className="afm-btn afm-btn-ghost">Customer Login</Link>
-            <Link href="/shop-login" className="afm-btn afm-btn-primary">Shop Owner Login</Link>
+            {isAuthenticated ? (
+              <>
+                <Link href={isVendor ? '/vendor-dashboard' : '/account'} className="afm-btn afm-btn-ghost" onClick={() => setMenuOpen(false)}>
+                  {isVendor ? 'My Dashboard' : 'My Account'}
+                </Link>
+                <button className="afm-btn afm-btn-primary" onClick={handleSignOut}>Sign out</button>
+              </>
+            ) : (
+              <>
+                <Link href="/login" className="afm-btn afm-btn-ghost">Customer Login</Link>
+                <Link href="/shop-login" className="afm-btn afm-btn-primary">Shop Owner Login</Link>
+              </>
+            )}
           </div>
         </div>
       </div>
