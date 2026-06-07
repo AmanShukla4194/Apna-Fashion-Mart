@@ -71,7 +71,7 @@ export default function CheckoutPage() {
   const setF = (k, v) => setForm(f => ({ ...f, [k]: v }));
 
   const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const deliveryFee = 0; // temporarily free for testing
+  const deliveryFee = subtotal >= 999 ? 0 : 49;
   const total = subtotal + deliveryFee;
 
   const handlePlaceOrder = async () => {

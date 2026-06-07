@@ -152,8 +152,8 @@ async function create(user, body) {
     if (product.stock_quantity < item.quantity) {
       return error(400, `Insufficient stock for "${product.name}"`);
     }
-    // Use compare_price (sale price) if set, else regular price — both in paise
-    const unitPrice = product.compare_price ?? product.price;
+    // Use current selling price (price), not compare_price (which is MRP/original)
+    const unitPrice = product.price;
     const totalPrice = unitPrice * item.quantity;
     subtotal += totalPrice;
     orderItems.push({

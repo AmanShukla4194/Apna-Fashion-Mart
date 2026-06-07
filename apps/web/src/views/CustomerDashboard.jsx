@@ -10,6 +10,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useCart } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
+import { apiRequest } from '@/lib/aws/config';
 
 const NOTIF_ITEMS = [
   ['Price drop alerts', 'When wishlisted items go on sale at your saved boutiques'],
@@ -82,8 +83,16 @@ function AccountView({ setView, onProductClick }) {
     }
   };
 
-  // No real orders until Razorpay + orders API is live
-  const orders = [];
+  const [orders, setOrders] = useState([]);
+  const [ordersLoading, setOrdersLoading] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser) return;
+    apiRequest('/orders')
+      .then(data => setOrders(data?.orders || []))
+      .catch(() => setOrders([]))
+      .finally(() => setOrdersLoading(false));
+  }, [currentUser]);
 
   return (
     <main>
@@ -139,15 +148,43 @@ function AccountView({ setView, onProductClick }) {
           </div>
 
           {tab === 'orders' && (
-            <div style={{ textAlign: 'center', padding: '60px 24px', color: 'var(--fg-muted)' }}>
-              <Package size={48} style={{ opacity: 0.2, marginBottom: 16, display: 'block', margin: '0 auto 16px' }} />
-              <h3 style={{ font: '600 20px Playfair Display', color: 'var(--navy-800)', marginBottom: 8 }}>No orders yet</h3>
-              <p style={{ font: '400 14px Poppins', marginBottom: 24 }}>
-                Your orders will appear here once you place one from a nearby shop.
-              </p>
-              <button className="afm-btn afm-btn-primary" onClick={() => router.push('/nearby-shops')}>
-                Browse nearby shops →
-              </button>
+            <div>
+              {ordersLoading ? (
+                <div style={{ textAlign: 'center', padding: '40px 0' }}>
+                  <div className="w-10 h-10 border-4 border-secondary border-t-transparent rounded-full animate-spin mx-auto" />
+                </div>
+              ) : orders.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '60px 24px', color: 'var(--fg-muted)' }}>
+                  <Package size={48} style={{ opacity: 0.2, marginBottom: 16, display: 'block', margin: '0 auto 16px' }} />
+                  <h3 style={{ font: '600 20px Playfair Display', color: 'var(--navy-800)', marginBottom: 8 }}>No orders yet</h3>
+                  <p style={{ font: '400 14px Poppins', marginBottom: 24 }}>Your orders will appear here once you place one.</p>
+                  <button className="afm-btn afm-btn-primary" onClick={() => router.push('/nearby-shops')}>Browse nearby shops →</button>
+                </div>
+              ) : orders.map(o => (
+                <article key={o.id} className="order-card" style={{ marginBottom: 16 }}>
+                  <div className="head">
+                    <div><div className="ll">Order placed</div><div className="vv">{new Date(o.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</div></div>
+                    <div><div className="ll">Total</div><div className="vv">₹{(o.total || 0).toLocaleString('en-IN')}</div></div>
+                    <div><div className="ll">Order ID</div><div className="vv id">{o.order_number}</div></div>
+                    <div><div className="ll">Shop</div><div className="vv">{o.shop_name || '—'}</div></div>
+                  </div>
+                  <div className="body" style={{ padding: '16px 20px' }}>
+                    <div className="info">
+                      <div className="name" style={{ textTransform: 'capitalize' }}>{o.item_count} item{o.item_count !== 1 ? 's' : ''}</div>
+                      <div className="meta">
+                        Payment: <strong style={{ color: o.payment_status === 'paid' ? '#16a34a' : 'var(--fg-muted)', textTransform: 'capitalize' }}>{o.payment_status}</strong>
+                        {' · '}Method: <strong style={{ textTransform: 'capitalize' }}>{o.payment_method}</strong>
+                      </div>
+                    </div>
+                    <div>
+                      <span style={{ display: 'inline-block', padding: '4px 12px', borderRadius: 99, font: '600 12px Poppins', textTransform: 'capitalize',
+                        background: o.status === 'delivered' ? '#dcfce7' : o.status === 'pending' ? '#fef9c3' : '#dbeafe',
+                        color: o.status === 'delivered' ? '#15803d' : o.status === 'pending' ? '#854d0e' : '#1e40af',
+                      }}>{o.status}</span>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
           )}
 
