@@ -58,3 +58,4 @@ coverage/
 .yarn/install-state.gz
 
 rzp-key.csv
+SYSTEM_DESIGN.md

@@ -34,7 +34,10 @@
       "Read(//c/Users/amans/Downloads/horizons-export-44d9ad64-2168-4c2d-8800-da46d0c76523 \\(1\\)/Mobile App Version/lib/features/cart/**)",
       "Bash(rm \"c:/Users/amans/Downloads/horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 \\(1\\)/backend.zip\")",
       "Bash(zip -r ../backend.zip . -x \"*.git*\")",
-      "Read(//c/Users/amans/Downloads/**)"
+      "Read(//c/Users/amans/Downloads/**)",
+      "Bash(grep -r \"NEXT_PUBLIC_API_URL\" apps/web --include=\"*.tsx\" --include=\"*.ts\" --include=\"*.jsx\" --include=\"*.js\" --include=\"*.env*\" -l)",
+      "Bash(ls apps/web/.env*)",
+      "Bash(cat apps/web/.env.local)"
     ],
     "additionalDirectories": [
       "c:\\Users\\amans\\Downloads\\horizons-export-44d9ad84-2168-4c2d-8800-da46d0c76523 (1)\\apps\\web\\src\\app\\account",
