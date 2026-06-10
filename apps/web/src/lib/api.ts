@@ -475,6 +475,22 @@ export async function verifyStore(storeId: string, verified: boolean): Promise<S
   return apiRequest<Store>(`/admin/shops/${storeId}/verify`, { method: 'PATCH', body: JSON.stringify({ verified }) });
 }
 
+// ── Image Upload ──────────────────────────────────────────────────────────────
+
+export async function uploadImageToS3(file: File, folder = 'products'): Promise<string> {
+  const { uploadUrl, publicUrl } = await apiRequest<{ uploadUrl: string; publicUrl: string; key: string }>('/uploads', {
+    method: 'POST',
+    body: JSON.stringify({ folder, filename: file.name, contentType: file.type }),
+  });
+  // PUT directly to S3 — presigned URL contains credentials, no auth header needed
+  await fetch(uploadUrl, {
+    method: 'PUT',
+    body: file,
+    headers: { 'Content-Type': file.type },
+  });
+  return publicUrl;
+}
+
 export async function getPlatformStats(): Promise<{
   totalUsers: number;
   totalStores: number;

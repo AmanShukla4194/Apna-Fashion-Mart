@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Store, Package, ShoppingBag, MessageSquare, TrendingUp, AlertCircle, Plus, Star, X } from 'lucide-react';
 import Header from '@/components/Header';
@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
-import { getVendorStore, createStore, createProduct, updateProduct, deleteProduct } from '@/lib/api';
+import { getVendorStore, createStore, createProduct, updateProduct, deleteProduct, uploadImageToS3 } from '@/lib/api';
 import { apiRequest } from '@/lib/aws/config';
 
 const CATEGORIES = ['ethnic', 'women', 'men', 'kids', 'streetwear', 'footwear', 'accessories'];
@@ -34,6 +34,10 @@ const VendorDashboard = () => {
   const [editingProduct, setEditingProduct] = useState(null);
   const [productForm, setProductForm] = useState({ name: '', category: '', price: '', oldPrice: '', stock: '', description: '', sizes: '' });
   const [saving, setSaving] = useState(false);
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
 
   // Store setup modal state
   const [showStoreSetup, setShowStoreSetup] = useState(false);
@@ -66,6 +70,8 @@ const VendorDashboard = () => {
   const openAddModal = () => {
     setEditingProduct(null);
     setProductForm({ name: '', category: '', price: '', oldPrice: '', stock: '', description: '', sizes: '' });
+    setImageFile(null);
+    setImagePreview(null);
     setShowProductModal(true);
   };
 
@@ -75,11 +81,13 @@ const VendorDashboard = () => {
       name: p.name || '',
       category: p.category || '',
       price: String(p.price || ''),
-      oldPrice: String(p.oldPrice || ''),
-      stock: String(p.stock || ''),
+      oldPrice: String(p.compare_price || p.oldPrice || ''),
+      stock: String(p.stock_quantity ?? p.stock ?? ''),
       description: p.description || '',
       sizes: (p.sizes || []).join(', '),
     });
+    setImageFile(null);
+    setImagePreview(p.images?.[0] || null);
     setShowProductModal(true);
   };
 
@@ -88,15 +96,23 @@ const VendorDashboard = () => {
     if (!store) { toast.error('Set up your store first'); return; }
     setSaving(true);
     try {
+      let imageUrl = imagePreview; // keep existing URL when editing
+      if (imageFile) {
+        setUploadingImage(true);
+        toast.info('Uploading image…');
+        imageUrl = await uploadImageToS3(imageFile, 'products');
+        setUploadingImage(false);
+      }
       const payload = {
         name: productForm.name,
-        description: productForm.description,
-        category: productForm.category,
+        description: productForm.description || undefined,
+        category: productForm.category || undefined,
         price: Number(productForm.price),
         compare_price: Number(productForm.oldPrice) || undefined,
         stock_quantity: Number(productForm.stock) || 0,
         sizes: productForm.sizes ? productForm.sizes.split(',').map(s => s.trim()).filter(Boolean) : [],
         shop_id: store.id,
+        images: imageUrl ? [imageUrl] : [],
       };
       if (editingProduct) {
         const updated = await updateProduct(editingProduct.id, payload);
@@ -113,6 +129,7 @@ const VendorDashboard = () => {
       toast.error(err.message || 'Failed to save product');
     } finally {
       setSaving(false);
+      setUploadingImage(false);
     }
   };
 
@@ -129,7 +146,7 @@ const VendorDashboard = () => {
   const totalRevenue = orders.filter(o => o.payment_status === 'paid').reduce((sum, o) => sum + (o.total ?? 0), 0);
   const lowStock = products.filter(p => p.stock < 5);
   const pendingInquiries = inquiries.filter(i => i.status === 'open');
-  const pendingOrders = orders.filter(o => o.order_status === 'pending');
+  const pendingOrders = orders.filter(o => o.status === 'pending');
 
   const chartData = [
     { name: 'Mon', value: 4000 }, { name: 'Tue', value: 3000 }, { name: 'Wed', value: 5000 },
@@ -229,12 +246,12 @@ const VendorDashboard = () => {
                       {orders.slice(0, 4).map(o => (
                         <div key={o.id} className="flex justify-between items-center border-b pb-3 last:border-0">
                           <div>
-                            <p className="font-medium text-sm">#{o.id.slice(0, 6).toUpperCase()}</p>
+                            <p className="font-medium text-sm">{o.order_number}</p>
                             <p className="text-xs text-muted-foreground">{new Date(o.created_at).toLocaleDateString()}</p>
                           </div>
                           <div className="text-right">
                             <p className="font-bold text-sm">₹{o.total}</p>
-                            <p className="text-[10px] uppercase text-secondary font-bold">{o.order_status}</p>
+                            <p className="text-[10px] uppercase text-secondary font-bold">{o.status}</p>
                           </div>
                         </div>
                       ))}
@@ -323,7 +340,7 @@ const VendorDashboard = () => {
                     <div className="text-sm text-muted-foreground">This Week Revenue</div>
                   </Card>
                   <Card className="p-5 bg-white text-center">
-                    <div className="text-3xl font-bold text-blue-600 mb-1">{orders.filter(o => o.order_status === 'delivered').length}</div>
+                    <div className="text-3xl font-bold text-blue-600 mb-1">{orders.filter(o => o.status === 'delivered').length}</div>
                     <div className="text-sm text-muted-foreground">Delivered Orders</div>
                   </Card>
                   <Card className="p-5 bg-white text-center">
@@ -413,6 +430,42 @@ const VendorDashboard = () => {
               <button onClick={() => setShowProductModal(false)} className="text-muted-foreground hover:text-foreground p-1 rounded-full hover:bg-muted/40"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 space-y-4">
+              {/* Image Upload */}
+              <div>
+                <label className="text-sm font-medium text-foreground block mb-1">Product Image</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      setImageFile(file);
+                      setImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
+                <div
+                  onClick={() => !uploadingImage && fileInputRef.current?.click()}
+                  className="w-full h-40 border-2 border-dashed border-border rounded-xl cursor-pointer hover:border-secondary/60 transition-colors overflow-hidden flex items-center justify-center bg-muted/10 relative"
+                >
+                  {imagePreview ? (
+                    <>
+                      <img src={imagePreview} className="w-full h-full object-cover" alt="Preview" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <p className="text-white text-sm font-semibold">Click to change photo</p>
+                      </div>
+                    </>
+                  ) : (
+                    <div className="text-center p-4">
+                      <div className="text-4xl mb-2">📷</div>
+                      <p className="text-sm text-muted-foreground font-medium">Click to upload product photo</p>
+                      <p className="text-xs text-muted-foreground mt-1">JPG, PNG or WebP — recommended 800×1000px</p>
+                    </div>
+                  )}
+                </div>
+              </div>
               <div>
                 <label className="text-sm font-medium text-foreground block mb-1">Product Name *</label>
                 <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={productForm.name} onChange={e => setProductForm(f => ({...f, name: e.target.value}))} placeholder="e.g. Handloom Silk Saree" />
@@ -450,8 +503,8 @@ const VendorDashboard = () => {
               </div>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowProductModal(false)} className="flex-1 border border-border rounded-full py-2 text-sm font-medium hover:bg-muted/30 transition-colors">Cancel</button>
-                <button onClick={handleSaveProduct} disabled={saving} className="flex-1 bg-secondary text-white rounded-full py-2 text-sm font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-60">
-                  {saving ? 'Saving…' : editingProduct ? 'Update Product' : 'Add Product'}
+                <button onClick={handleSaveProduct} disabled={saving || uploadingImage} className="flex-1 bg-secondary text-white rounded-full py-2 text-sm font-semibold hover:bg-secondary/90 transition-colors disabled:opacity-60">
+                  {uploadingImage ? 'Uploading image…' : saving ? 'Saving…' : editingProduct ? 'Update Product' : 'Add Product'}
                 </button>
               </div>
             </div>

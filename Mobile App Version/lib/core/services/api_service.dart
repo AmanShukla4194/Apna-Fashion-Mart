@@ -351,6 +351,71 @@ class ApiService {
   }
 
   // ---------------------------------------------------------------------------
+  // Vendor — Products
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> createProduct(Map<String, dynamic> data) async {
+    final response = await _dio.post('/products', data: data);
+    return _parseMap(response.data) ?? {};
+  }
+
+  Future<Map<String, dynamic>> updateProduct(String id, Map<String, dynamic> data) async {
+    final response = await _dio.put('/products/$id', data: data);
+    return _parseMap(response.data) ?? {};
+  }
+
+  Future<void> deleteProduct(String id) async {
+    await _dio.delete('/products/$id');
+  }
+
+  Future<Map<String, dynamic>?> getMyShop() async {
+    try {
+      final response = await _dio.get('/shops/mine');
+      return _parseMap(response.data);
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 404) return null;
+      rethrow;
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> getMyProducts(String shopId) async {
+    final response = await _dio.get('/products', queryParameters: {'shop': shopId, 'limit': 100});
+    return _parseList(response.data);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Image Upload — S3 Presigned URL
+  // ---------------------------------------------------------------------------
+  Future<Map<String, dynamic>> getPresignedUrl({
+    required String filename,
+    required String contentType,
+    String folder = 'products',
+  }) async {
+    final response = await _dio.post('/uploads', data: {
+      'folder': folder,
+      'filename': filename,
+      'contentType': contentType,
+    });
+    return _parseMap(response.data) ?? {};
+  }
+
+  /// Upload raw bytes directly to S3 using a presigned URL (no auth headers).
+  Future<void> uploadFileToS3(String presignedUrl, List<int> bytes, String contentType) async {
+    final plainDio = Dio();
+    await plainDio.put(
+      presignedUrl,
+      data: Stream.fromIterable(bytes.map((e) => [e])),
+      options: Options(
+        headers: {
+          'Content-Type': contentType,
+          'Content-Length': bytes.length,
+        },
+        sendTimeout: const Duration(seconds: 60),
+        receiveTimeout: const Duration(seconds: 60),
+      ),
+    );
+  }
+
+  // ---------------------------------------------------------------------------
   // Helpers
   // ---------------------------------------------------------------------------
   List<Map<String, dynamic>> _parseList(dynamic data) {
