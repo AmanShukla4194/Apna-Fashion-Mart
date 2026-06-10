@@ -11,6 +11,7 @@ import { AFM_DATA } from '@/lib/seed-data';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useCart } from '@/contexts/CartContext';
+import { apiRequest } from '@/lib/aws/config';
 
 function AfmButton({ variant='primary', size, children, onClick, className='' }) {
   const cls = variant === 'on-dark'  ? 'afm-btn afm-btn-on-dark'
@@ -452,8 +453,6 @@ function HomeView({ setView, onProductClick, onAddToCart, wishlist, toggleWishli
 
 
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
-
 function normalizeProduct(p) {
   return {
     id: p.id,
@@ -475,6 +474,7 @@ function normalizeShop(s) {
   return {
     id: s.id,
     name: s.name,
+    initial: (s.name || 'S').charAt(0).toUpperCase(),
     img: s.logo_url || null,
     bg: 'linear-gradient(135deg, #FFE4F0 0%, #FFF0F7 100%)',
     verified: s.is_verified || false,
@@ -494,18 +494,14 @@ export default function HomePage() {
   const [apiShops, setApiShops] = React.useState([]);
 
   React.useEffect(() => {
-    // Fetch real products from DB
-    fetch(`${API_URL}/products?limit=8`)
-      .then(r => r.ok ? r.json() : null)
+    apiRequest('/products?limit=8')
       .then(data => {
         const list = data?.products || [];
         if (list.length > 0) setApiProducts(list.map(normalizeProduct));
       })
       .catch(() => {});
 
-    // Fetch real shops from DB
-    fetch(`${API_URL}/shops?limit=8`)
-      .then(r => r.ok ? r.json() : null)
+    apiRequest('/shops?limit=8')
       .then(data => {
         const list = data?.shops || [];
         if (list.length > 0) setApiShops(list.map(normalizeShop));
