@@ -2,6 +2,7 @@ const crypto = require('crypto');
 const { query, withTransaction } = require('../db');
 const { requireAuth, requireRole } = require('../auth');
 const { ok, error } = require('../response');
+const email = require('../email');
 
 async function handle(ctx) {
   const { method, path, pathParams, queryParams, body, user } = ctx;
@@ -186,7 +187,9 @@ async function create(user, body) {
     country: address.country,
   };
 
-  return withTransaction(async (client) => {
+  let createdOrder = null;
+
+  const response = await withTransaction(async (client) => {
     // Create a sequence for order numbers if it doesn't exist yet
     await client.query(`CREATE SEQUENCE IF NOT EXISTS order_number_seq START 1`);
     const seqResult = await client.query(`SELECT NEXTVAL('order_number_seq') AS n`);
@@ -226,8 +229,28 @@ async function create(user, body) {
       );
     }
 
+    createdOrder = order;
     return ok({ ...order, items: orderItems }, 201);
   });
+
+  // Send confirmation emails (after transaction commits — errors here never break the order)
+  if (createdOrder) {
+    try {
+      const vendorRes = await query(
+        `SELECT u.email FROM users u JOIN shops s ON s.vendor_id = u.id WHERE s.id = $1`,
+        [shopId]
+      );
+      const vendorEmail = vendorRes.rows[0]?.email;
+      await Promise.all([
+        email.sendOrderConfirmedCustomer(createdOrder, user.email, orderItems),
+        email.sendNewOrderVendor(createdOrder, vendorEmail, orderItems),
+      ]);
+    } catch (err) {
+      console.error('Order email error:', err.message);
+    }
+  }
+
+  return response;
 }
 
 async function updateStatus(user, id, body) {
@@ -271,7 +294,25 @@ async function updateStatus(user, id, body) {
     values
   );
   if (result.rows.length === 0) return error(404, 'Order not found');
-  return ok(result.rows[0]);
+  const updatedOrder = result.rows[0];
+
+  // Email customer about status change
+  if (['confirmed', 'shipped', 'delivered', 'cancelled'].includes(status)) {
+    try {
+      const customerRes = await query(
+        `SELECT u.email FROM users u JOIN orders o ON o.user_id = u.id WHERE o.id = $1`,
+        [id]
+      );
+      const customerEmail = customerRes.rows[0]?.email;
+      if (customerEmail) {
+        await email.sendStatusUpdateCustomer(updatedOrder, customerEmail, status);
+      }
+    } catch (err) {
+      console.error('Status email error:', err.message);
+    }
+  }
+
+  return ok(updatedOrder);
 }
 
 module.exports = { handle };

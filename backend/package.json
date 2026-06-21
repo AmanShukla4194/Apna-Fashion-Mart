@@ -8,6 +8,7 @@
     "build": "zip -r function.zip . -x '*.git*' -x 'node_modules/.bin/*'"
   },
   "dependencies": {
+    "@aws-sdk/client-ses": "^3.0.0",
     "@aws-sdk/client-s3": "^3.0.0",
     "@aws-sdk/rds-signer": "^3.0.0",
     "@aws-sdk/s3-request-presigner": "^3.0.0",
