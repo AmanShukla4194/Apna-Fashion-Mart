@@ -671,12 +671,6 @@ const VendorDashboard = () => {
                   <input type="tel" maxLength={10} className="flex-1 border border-border rounded-r-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.phone} onChange={e => setStoreForm(f => ({...f, phone: e.target.value.replace(/\D/g, '')}))} placeholder="9876543210" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium block mb-1">City *</label>
-                  <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 bg-white" value={storeForm.city} onChange={e => setStoreForm(f => ({...f, city: e.target.value}))}>
-                    <option value="">Select…</option>
-                    {['Mumbai', 'Bengaluru', 'Delhi', 'Jaipur', 'Hyderabad'].map(c => <option key={c}>{c}</option>)}
               <p className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-lg">After submission, our team will review and verify your store within 48 hours. You will receive an email confirmation.</p>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowStoreSetup(false)} className="flex-1 border border-border rounded-full py-2 text-sm font-medium hover:bg-muted/30 transition-colors">Cancel</button>
