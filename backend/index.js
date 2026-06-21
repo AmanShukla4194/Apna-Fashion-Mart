@@ -46,7 +46,12 @@ exports.handler = async (event) => {
       const last = segments[segments.length - 1];
       const knownSubs = ['featured','nearby','mine','status','search',
                          'create-order','verify','razorpay-create','items'];
-      if (!knownSubs.includes(last)) pathParams.id = last;
+      if (!knownSubs.includes(last)) {
+        pathParams.id = last;
+      } else if (segments.length >= 3) {
+        // handles /orders/:id/status, /products/:id/items, etc.
+        pathParams.id = segments[segments.length - 2];
+      }
     }
   }
   let body = {};
