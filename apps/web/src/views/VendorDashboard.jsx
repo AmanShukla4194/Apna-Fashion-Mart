@@ -41,7 +41,7 @@ const VendorDashboard = () => {
 
   // Store setup modal state
   const [showStoreSetup, setShowStoreSetup] = useState(false);
-  const [storeForm, setStoreForm] = useState({ name: '', description: '', city: '', address: '', phone: '' });
+  const [storeForm, setStoreForm] = useState({ name: '', description: '', city: '', state: '', address: '', phone: '', pincode: '' });
   const [savingStore, setSavingStore] = useState(false);
 
   // Order status update state
@@ -641,38 +641,64 @@ const VendorDashboard = () => {
                 <label className="text-sm font-medium block mb-1">Description</label>
                 <textarea rows={3} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 resize-none" value={storeForm.description} onChange={e => setStoreForm(f => ({...f, description: e.target.value}))} placeholder="Tell customers about your boutique…" />
               </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">State *</label>
+                <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 bg-white" value={storeForm.state} onChange={e => setStoreForm(f => ({...f, state: e.target.value}))}>
+                  <option value="">Select state…</option>
+                  {['Andhra Pradesh','Arunachal Pradesh','Assam','Bihar','Chhattisgarh','Goa','Gujarat','Haryana','Himachal Pradesh','Jharkhand','Karnataka','Kerala','Madhya Pradesh','Maharashtra','Manipur','Meghalaya','Mizoram','Nagaland','Odisha','Punjab','Rajasthan','Sikkim','Tamil Nadu','Telangana','Tripura','Uttar Pradesh','Uttarakhand','West Bengal','Andaman & Nicobar Islands','Chandigarh','Dadra & Nagar Haveli and Daman & Diu','Delhi','Jammu & Kashmir','Ladakh','Lakshadweep','Puducherry'].map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium block mb-1">City *</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.city} onChange={e => setStoreForm(f => ({...f, city: e.target.value}))} placeholder="e.g. Mumbai" />
+                </div>
+                <div>
+                  <label className="text-sm font-medium block mb-1">Pincode *</label>
+                  <input type="text" maxLength={6} className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.pincode} onChange={e => setStoreForm(f => ({...f, pincode: e.target.value.replace(/\D/g, '')}))} placeholder="110001" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="text-sm font-medium block mb-1">Store Address *</label>
+                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.address} onChange={e => setStoreForm(f => ({...f, address: e.target.value}))} placeholder="Shop No., Street, Area" />
+                </div>
+              </div>
+              <div>
+                <label className="text-sm font-medium block mb-1">Phone *</label>
+                <div className="flex">
+                  <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-border bg-muted text-sm font-medium text-muted-foreground">+91</span>
+                  <input type="tel" maxLength={10} className="flex-1 border border-border rounded-r-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.phone} onChange={e => setStoreForm(f => ({...f, phone: e.target.value.replace(/\D/g, '')}))} placeholder="9876543210" />
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="text-sm font-medium block mb-1">City *</label>
                   <select className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40 bg-white" value={storeForm.city} onChange={e => setStoreForm(f => ({...f, city: e.target.value}))}>
                     <option value="">Select…</option>
                     {['Mumbai', 'Bengaluru', 'Delhi', 'Jaipur', 'Hyderabad'].map(c => <option key={c}>{c}</option>)}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-sm font-medium block mb-1">Phone</label>
-                  <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.phone} onChange={e => setStoreForm(f => ({...f, phone: e.target.value}))} placeholder="+91 98765 43210" />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium block mb-1">Store Address</label>
-                <input className="w-full border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-secondary/40" value={storeForm.address} onChange={e => setStoreForm(f => ({...f, address: e.target.value}))} placeholder="Street, Area, City, PIN" />
-              </div>
               <p className="text-xs text-muted-foreground bg-muted/40 p-3 rounded-lg">After submission, our team will review and verify your store within 48 hours. You will receive an email confirmation.</p>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowStoreSetup(false)} className="flex-1 border border-border rounded-full py-2 text-sm font-medium hover:bg-muted/30 transition-colors">Cancel</button>
                 <button
                   disabled={savingStore}
                   onClick={async () => {
-                    if (!storeForm.name || !storeForm.city) { toast.error('Name and city are required'); return; }
+                    const { name, city, state, address, phone, pincode } = storeForm;
+                    if (!name || !city || !state || !address || !phone || !pincode) {
+                      toast.error('All fields marked * are required'); return;
+                    }
+                    if (phone.length !== 10) { toast.error('Enter a valid 10-digit phone number'); return; }
+                    if (pincode.length !== 6) { toast.error('Enter a valid 6-digit pincode'); return; }
                     setSavingStore(true);
                     try {
                       const newStore = await createStore({
-                        name: storeForm.name,
+                        name,
                         description: storeForm.description || undefined,
-                        city: storeForm.city,
-                        address_line1: storeForm.address || undefined,
-                        phone: storeForm.phone || undefined,
+                        city,
+                        state,
+                        address_line1: address,
+                        phone: `+91${phone}`,
+                        pincode,
                       });
                       setStore(newStore);
                       setShowStoreSetup(false);
