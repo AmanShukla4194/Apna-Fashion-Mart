@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { Store, Package, ShoppingBag, MessageSquare, TrendingUp, AlertCircle, Plus, Star, X } from 'lucide-react';
+import { Store, Package, ShoppingBag, MessageSquare, TrendingUp, AlertCircle, Plus, Star, X, Truck, CheckCircle2, XCircle } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import StatsCard from '@/components/StatsCard';
@@ -44,9 +44,28 @@ const VendorDashboard = () => {
   const [storeForm, setStoreForm] = useState({ name: '', description: '', city: '', address: '', phone: '' });
   const [savingStore, setSavingStore] = useState(false);
 
+  // Order status update state
+  const [updatingOrderId, setUpdatingOrderId] = useState(null);
+
   useEffect(() => {
     if (currentUser) fetchVendorData();
   }, [currentUser]);
+
+  const handleUpdateOrderStatus = async (orderId, newStatus) => {
+    setUpdatingOrderId(orderId);
+    try {
+      await apiRequest(`/orders/${orderId}/status`, {
+        method: 'PATCH',
+        body: JSON.stringify({ status: newStatus }),
+      });
+      setOrders(prev => prev.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+      toast.success(`Order marked as ${newStatus}`);
+    } catch (err) {
+      toast.error(err?.message || 'Failed to update order status');
+    } finally {
+      setUpdatingOrderId(null);
+    }
+  };
 
   const fetchVendorData = async () => {
     try {
@@ -325,7 +344,100 @@ const VendorDashboard = () => {
                       <ShoppingBag className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
                       <p className="text-muted-foreground">No orders yet</p>
                     </Card>
-                  ) : orders.map(order => <OrderCard key={order.id} order={order} showCustomer={true} />)}
+                  ) : orders.map(order => {
+                    const status = order.status ?? 'pending';
+                    const isUpdating = updatingOrderId === order.id;
+                    const statusColors = {
+                      pending:    'bg-yellow-100 text-yellow-700',
+                      confirmed:  'bg-blue-100 text-blue-700',
+                      processing: 'bg-indigo-100 text-indigo-700',
+                      shipped:    'bg-purple-100 text-purple-700',
+                      delivered:  'bg-green-100 text-green-700',
+                      cancelled:  'bg-red-100 text-red-700',
+                    };
+                    return (
+                      <Card key={order.id} className="p-5 bg-white hover:shadow-md transition-shadow">
+                        {/* Header row */}
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <p className="font-bold text-sm text-primary">
+                              {order.order_number || `#${order.id.slice(0, 8).toUpperCase()}`}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-0.5">
+                              {order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
+                            </p>
+                          </div>
+                          <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide ${statusColors[status] || 'bg-gray-100 text-gray-700'}`}>
+                            {status}
+                          </span>
+                        </div>
+
+                        {/* Customer + total */}
+                        <div className="flex items-center justify-between pb-3 mb-3 border-b border-border/40">
+                          <div>
+                            <p className="text-sm font-semibold">{order.customer_name || 'Customer'}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {[order.delivery_city].filter(Boolean).join(' • ')}
+                              {order.item_count ? ` • ${order.item_count} item(s)` : ''}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-base text-secondary">₹{Number(order.total || 0).toLocaleString('en-IN')}</p>
+                            <p className={`text-[10px] font-semibold ${order.payment_status === 'paid' ? 'text-green-600' : 'text-orange-500'}`}>
+                              {order.payment_status === 'paid' ? 'Paid Online' : 'COD'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Action buttons */}
+                        <div className="flex gap-2">
+                          {status === 'pending' && (<>
+                            <button
+                              disabled={isUpdating}
+                              onClick={() => handleUpdateOrderStatus(order.id, 'confirmed')}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors disabled:opacity-60"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {isUpdating ? 'Updating…' : 'Confirm Order'}
+                            </button>
+                            <button
+                              disabled={isUpdating}
+                              onClick={() => handleUpdateOrderStatus(order.id, 'cancelled')}
+                              className="flex items-center justify-center gap-1.5 py-2 px-4 rounded-full border border-red-200 text-red-500 hover:bg-red-50 text-xs font-semibold transition-colors disabled:opacity-60"
+                            >
+                              <XCircle className="w-3.5 h-3.5" />
+                              Cancel
+                            </button>
+                          </>)}
+                          {status === 'confirmed' && (
+                            <button
+                              disabled={isUpdating}
+                              onClick={() => handleUpdateOrderStatus(order.id, 'shipped')}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-purple-600 hover:bg-purple-700 text-white text-xs font-semibold transition-colors disabled:opacity-60"
+                            >
+                              <Truck className="w-3.5 h-3.5" />
+                              {isUpdating ? 'Updating…' : 'Mark as Shipped'}
+                            </button>
+                          )}
+                          {status === 'shipped' && (
+                            <button
+                              disabled={isUpdating}
+                              onClick={() => handleUpdateOrderStatus(order.id, 'delivered')}
+                              className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-full bg-green-600 hover:bg-green-700 text-white text-xs font-semibold transition-colors disabled:opacity-60"
+                            >
+                              <CheckCircle2 className="w-3.5 h-3.5" />
+                              {isUpdating ? 'Updating…' : 'Mark Delivered'}
+                            </button>
+                          )}
+                          {(status === 'delivered' || status === 'cancelled') && (
+                            <p className="text-xs text-muted-foreground italic">
+                              {status === 'delivered' ? '✓ Order completed' : '✗ Order cancelled'}
+                            </p>
+                          )}
+                        </div>
+                      </Card>
+                    );
+                  })}
                 </div>
               </TabsContent>
 

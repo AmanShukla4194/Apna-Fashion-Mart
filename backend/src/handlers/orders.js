@@ -43,8 +43,10 @@ async function list(user, params) {
     SELECT
       o.id, o.order_number, o.user_id, o.shop_id, o.status,
       o.payment_status, o.payment_method, o.subtotal, o.delivery_fee,
-      o.discount, o.total, o.created_at, o.updated_at,
+      o.discount, o.total, o.notes, o.created_at, o.updated_at,
       s.name AS shop_name,
+      COALESCE(o.shipping_address->>'full_name', o.shipping_address->>'name') AS customer_name,
+      o.shipping_address->>'city' AS delivery_city,
       (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) AS item_count
     FROM orders o LEFT JOIN shops s ON s.id = o.shop_id
     ${where}
