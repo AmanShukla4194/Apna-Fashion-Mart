@@ -61,7 +61,7 @@ export default function Header({ view, setView }) {
   }, []);
   const handleSearch = (e) => {
     if (e.key === 'Enter' && searchQuery.trim()) {
-      router.push('/categories?q=' + encodeURIComponent(searchQuery.trim()));
+      router.push('/search?q=' + encodeURIComponent(searchQuery.trim()));
       setSearchQuery('');
     }
   };

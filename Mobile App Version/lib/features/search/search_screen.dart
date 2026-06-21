@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../core/services/api_service.dart';
 
 class SearchScreen extends ConsumerStatefulWidget {
   const SearchScreen({super.key});
@@ -55,17 +56,6 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     'Embroidered lehengas',
     'Festive wear',
     'Designer blouses',
-  ];
-
-  static const List<Map<String, dynamic>> _allProducts = [
-    {'id': '1', 'name': 'Banarasi Silk Saree', 'store': 'Aanya Atelier', 'price': 4899, 'oldPrice': 6200, 'rating': 4.8, 'distance': '1.4 km', 'category': 'Sarees'},
-    {'id': '2', 'name': 'Anarkali Suit Set', 'store': 'Riya Collections', 'price': 2199, 'rating': 4.6, 'distance': '2.1 km', 'category': 'Kurtas'},
-    {'id': '3', 'name': 'Embroidered Lehenga', 'store': 'Mira Weaves', 'price': 8499, 'oldPrice': 11000, 'rating': 4.9, 'distance': '0.9 km', 'category': 'Lehengas'},
-    {'id': '4', 'name': 'Cotton Kurti Combo', 'store': 'Rang Studio', 'price': 1299, 'rating': 4.4, 'distance': '3.2 km', 'category': 'Kurtas'},
-    {'id': '5', 'name': 'Chanderi Dupatta', 'store': 'Weaves & Co', 'price': 899, 'rating': 4.7, 'distance': '1.8 km', 'category': 'Sarees'},
-    {'id': '6', 'name': 'Silk Coord Set', 'store': 'Studio Ekta', 'price': 3299, 'oldPrice': 4500, 'rating': 4.5, 'distance': '2.8 km', 'category': 'Western'},
-    {'id': '7', 'name': 'Chikankari Kurti', 'store': 'Lucknow Threads', 'price': 1899, 'rating': 4.7, 'distance': '1.2 km', 'category': 'Kurtas'},
-    {'id': '8', 'name': 'Kanjivaram Saree', 'store': 'Silk House', 'price': 9500, 'oldPrice': 12000, 'rating': 4.9, 'distance': '2.5 km', 'category': 'Sarees'},
   ];
 
   @override
@@ -140,59 +130,62 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     });
   }
 
-  void _performSearch(String query) {
-    final q = query.toLowerCase().trim();
-    var results = _allProducts.where((p) {
-      final nameMatch = (p['name'] as String).toLowerCase().contains(q);
-      final storeMatch = (p['store'] as String).toLowerCase().contains(q);
-      final catMatch = (p['category'] as String).toLowerCase().contains(q);
-      return nameMatch || storeMatch || catMatch;
-    }).toList();
-
-    // Apply category filter
-    if (_selectedCategory != 'All') {
-      results = results
-          .where((p) =>
-              (p['category'] as String).toLowerCase() ==
-              _selectedCategory.toLowerCase())
-          .toList();
+  Future<void> _performSearch(String query) async {
+    final q = query.trim();
+    if (q.isEmpty) {
+      setState(() { _searchResults = []; _isSearching = false; });
+      return;
     }
+    setState(() => _isSearching = true);
+    try {
+      final category = _selectedCategory != 'All' ? _selectedCategory : null;
+      final raw = await ApiService.instance.getProducts(
+        search: q,
+        category: category,
+      );
 
-    // Apply price filter
-    results = results.where((p) {
-      final price = p['price'] as int;
-      return price >= _priceRange.start && price <= _priceRange.end;
-    }).toList();
+      var results = raw.map((p) {
+        final price = (p['price'] as num?)?.toInt() ?? 0;
+        final comparePrice = (p['compare_price'] as num?)?.toInt();
+        return <String, dynamic>{
+          'id': p['id']?.toString() ?? '',
+          'name': p['name']?.toString() ?? '',
+          'store': p['shop_name']?.toString() ?? 'Shop',
+          'price': price,
+          'oldPrice': (comparePrice != null && comparePrice > price) ? comparePrice : null,
+          'rating': (p['rating'] as num?)?.toDouble() ?? 0.0,
+          'category': p['category']?.toString() ?? '',
+        };
+      }).toList();
 
-    // Apply rating filter
-    if (_minRating > 0) {
-      results = results
-          .where((p) => (p['rating'] as double) >= _minRating)
-          .toList();
+      // Apply price filter
+      results = results.where((p) {
+        final price = p['price'] as int;
+        return price >= _priceRange.start && price <= _priceRange.end;
+      }).toList();
+
+      // Apply rating filter
+      if (_minRating > 0) {
+        results = results.where((p) => (p['rating'] as double) >= _minRating).toList();
+      }
+
+      // Apply sort
+      switch (_selectedSort) {
+        case 'Price: Low to High':
+          results.sort((a, b) => (a['price'] as int).compareTo(b['price'] as int));
+          break;
+        case 'Price: High to Low':
+          results.sort((a, b) => (b['price'] as int).compareTo(a['price'] as int));
+          break;
+        case 'Rating':
+          results.sort((a, b) => (b['rating'] as double).compareTo(a['rating'] as double));
+          break;
+      }
+
+      setState(() { _searchResults = results; _isSearching = false; });
+    } catch (_) {
+      setState(() { _searchResults = []; _isSearching = false; });
     }
-
-    // Apply sort
-    switch (_selectedSort) {
-      case 'Price: Low to High':
-        results.sort((a, b) =>
-            (a['price'] as int).compareTo(b['price'] as int));
-        break;
-      case 'Price: High to Low':
-        results.sort((a, b) =>
-            (b['price'] as int).compareTo(a['price'] as int));
-        break;
-      case 'Rating':
-        results.sort((a, b) =>
-            (b['rating'] as double).compareTo(a['rating'] as double));
-        break;
-      default:
-        break;
-    }
-
-    setState(() {
-      _searchResults = results;
-      _isSearching = false;
-    });
   }
 
   void _onSearchSubmit(String query) {
